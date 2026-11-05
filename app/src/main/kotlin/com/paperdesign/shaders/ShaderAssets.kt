@@ -2,6 +2,7 @@ package com.paperdesign.shaders
 
 import android.content.Context
 import android.graphics.Bitmap
+import androidx.core.graphics.createBitmap
 import android.graphics.BitmapFactory
 import android.graphics.BitmapShader
 import android.graphics.Canvas
@@ -38,12 +39,14 @@ object ShaderAssets {
         BitmapFactory.decodeResource(appContext.resources, R.drawable.paper_noise, opts)
     }
 
-    @get:RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    val noiseShader: BitmapShader by lazy {
-        BitmapShader(noiseBitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP).apply {
-            filterMode = BitmapShader.FILTER_MODE_LINEAR
-        }
-    }
+    private var noiseShaderInstance: BitmapShader? = null
+
+    /** The noise as a shader input: CLAMP + bilinear, matching upstream's texture setup. */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    @Synchronized
+    fun noiseShader(): BitmapShader = noiseShaderInstance ?: BitmapShader(noiseBitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+        .apply { filterMode = BitmapShader.FILTER_MODE_LINEAR }
+        .also { noiseShaderInstance = it }
 
     /** Bundled sample photo-like image for the image filters. Drawn once, procedurally. */
     val sampleImage: Bitmap by lazy { drawSampleImage(1024, 1024) }
@@ -52,7 +55,7 @@ object ShaderAssets {
     val sampleShape: Bitmap by lazy { drawSampleShape(1024) }
 
     /** Upstream's `transparentPixel`, shown while an image is still being processed. */
-    val transparentPixel: Bitmap by lazy { Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888) }
+    val transparentPixel: Bitmap by lazy { createBitmap(1, 1) }
 
     fun sample(kind: SampleImage): Bitmap = when (kind) {
         SampleImage.PHOTO -> sampleImage
@@ -74,7 +77,7 @@ object ShaderAssets {
     }
 
     private fun drawSampleShape(size: Int): Bitmap {
-        val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val bmp = createBitmap(size, size)
         val c = Canvas(bmp)
         val p = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = 0xFF000000.toInt()
@@ -96,7 +99,7 @@ object ShaderAssets {
     }
 
     private fun drawSampleImage(w: Int, h: Int): Bitmap {
-        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val bmp = createBitmap(w, h)
         val c = Canvas(bmp)
         val p = Paint(Paint.ANTI_ALIAS_FLAG)
         p.shader = LinearGradient(0f, 0f, 0f, h * 0.7f, intArrayOf(0xFF1B2A6B.toInt(), 0xFFE0607E.toInt(), 0xFFFFC27A.toInt()), null, Shader.TileMode.CLAMP)

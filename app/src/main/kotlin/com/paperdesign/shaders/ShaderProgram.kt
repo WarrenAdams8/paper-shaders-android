@@ -37,7 +37,7 @@ class ShaderProgram(val spec: ShaderSpec, body: String) {
     init {
         if (has("u_noiseTexture")) {
             // Raw buffer sampling: the noise is data, so it must not be color managed.
-            shader.setInputBuffer("u_noiseTexture", ShaderAssets.noiseShader)
+            shader.setInputBuffer("u_noiseTexture", ShaderAssets.noiseShader())
         }
     }
 

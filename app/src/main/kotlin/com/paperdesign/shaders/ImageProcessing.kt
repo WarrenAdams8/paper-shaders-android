@@ -1,6 +1,8 @@
 package com.paperdesign.shaders
 
 import android.graphics.Bitmap
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.scale
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -30,7 +32,7 @@ object ImageProcessing {
         val width = imgW + 2 * padding
         val height = imgH + 2 * padding
 
-        val canvasBmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvasBmp = createBitmap(width, height)
         Canvas(canvasBmp).apply {
             drawColor(Color.WHITE)
             drawBitmap(source, null, Rect(padding, padding, padding + imgW, padding + imgH), Paint(Paint.FILTER_BITMAP_FLAG))
@@ -116,7 +118,7 @@ object ImageProcessing {
         val padY = ceil(height * padding).toInt()
 
         // 1. Shape mask at working resolution.
-        val shapeBmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val shapeBmp = createBitmap(width, height)
         Canvas(shapeBmp).drawBitmap(source, null, Rect(padX, padY, width - padX, height - padY), Paint(Paint.FILTER_BITMAP_FLAG))
         val n = width * height
         val px = IntArray(n)
@@ -200,7 +202,7 @@ object ImageProcessing {
             }
         }
         val tempBmp = Bitmap.createBitmap(temp, width, height, Bitmap.Config.ARGB_8888)
-        val upscaled = Bitmap.createScaledBitmap(tempBmp, originalWidth, originalHeight, true)
+        val upscaled = tempBmp.scale(originalWidth, originalHeight, filter = true)
         tempBmp.recycle()
         val up = IntArray(originalWidth * originalHeight)
         upscaled.getPixels(up, 0, originalWidth, 0, 0, originalWidth, originalHeight)
@@ -209,7 +211,7 @@ object ImageProcessing {
         // 6. Re-apply the original (padded) alpha at full resolution.
         val origPadX = ceil(originalWidth * padding).toInt()
         val origPadY = ceil(originalHeight * padding).toInt()
-        val origBmp = Bitmap.createBitmap(originalWidth, originalHeight, Bitmap.Config.ARGB_8888)
+        val origBmp = createBitmap(originalWidth, originalHeight)
         Canvas(origBmp).drawBitmap(
             source,
             null,

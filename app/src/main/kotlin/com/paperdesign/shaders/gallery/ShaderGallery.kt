@@ -32,6 +32,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.paperdesign.shaders.PaperShader
+import com.paperdesign.shaders.ShaderClock
 import com.paperdesign.shaders.ShaderSpec
 import com.paperdesign.shaders.ShaderState
 import com.paperdesign.shaders.specs.ShaderCatalog
@@ -97,7 +98,9 @@ private fun GalleryTile(spec: ShaderSpec, onClick: () -> Unit) {
                 .aspectRatio(1f)
                 .clip(RoundedCornerShape(20.dp)),
         ) {
-            PaperShader(state, Modifier.fillMaxSize(), playing = false)
+            // A few seconds in, so shaders that start empty (e.g. Color Panels) show something.
+            val clock = remember(spec) { ShaderClock(state.float("frame") + THUMBNAIL_TIME_MS) }
+            PaperShader(state, Modifier.fillMaxSize(), playing = false, clock = clock)
         }
         Text(
             spec.title,
@@ -106,3 +109,5 @@ private fun GalleryTile(spec: ShaderSpec, onClick: () -> Unit) {
         )
     }
 }
+
+private const val THUMBNAIL_TIME_MS = 12_000f

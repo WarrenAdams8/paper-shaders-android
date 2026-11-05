@@ -58,23 +58,23 @@ fun PaperShader(
         var last = 0L
         var frames = 0
         var fpsWindowStart = 0L
-        while (true) {
-            withFrameNanos { now ->
-                if (last != 0L) {
-                    val dtMs = (now - last) / 1_000_000f
-                    clock.timeMs += dtMs * state.float("speed")
-                }
-                last = now
-                if (fpsWindowStart == 0L) fpsWindowStart = now
-                frames++
-                val window = now - fpsWindowStart
-                if (window >= 500_000_000L) {
-                    clock.fps = frames * 1e9f / window
-                    frames = 0
-                    fpsWindowStart = now
-                }
+        // One callback instance for the whole loop: no per-frame lambda allocation.
+        val onFrame: (Long) -> Unit = { now ->
+            if (last != 0L) {
+                val dtMs = (now - last) / 1_000_000f
+                clock.timeMs += dtMs * state.float("speed")
+            }
+            last = now
+            if (fpsWindowStart == 0L) fpsWindowStart = now
+            frames++
+            val window = now - fpsWindowStart
+            if (window >= 500_000_000L) {
+                clock.fps = frames * 1e9f / window
+                frames = 0
+                fpsWindowStart = now
             }
         }
+        while (true) withFrameNanos(onFrame)
     }
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

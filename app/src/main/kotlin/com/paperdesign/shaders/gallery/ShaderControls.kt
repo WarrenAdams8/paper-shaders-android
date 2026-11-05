@@ -51,6 +51,7 @@ import com.paperdesign.shaders.FloatParam
 import com.paperdesign.shaders.ParamDef
 import com.paperdesign.shaders.ShaderState
 import com.paperdesign.shaders.toColor
+import java.util.Locale
 import kotlin.math.roundToInt
 
 /** Every control for one shader: presets, its own params, then the shared sizing params. */
@@ -204,7 +205,7 @@ private fun FloatControl(p: FloatParam, state: ShaderState) {
 }
 
 private fun formatValue(v: Float, step: Float): String =
-    if (step >= 1f) v.roundToInt().toString() else "%.2f".format(v)
+    if (step >= 1f) v.roundToInt().toString() else String.format(Locale.US, "%.2f", v)
 
 @Composable
 private fun Swatch(c: ArgbColor, onClick: () -> Unit) {

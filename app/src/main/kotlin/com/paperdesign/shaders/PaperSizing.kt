@@ -78,9 +78,10 @@ class PaperSizing {
         worldW = worldWidth; worldH = worldHeight
 
         // fragCoord -> GL uv: x = fx / W - 0.5, y = 0.5 - fy / H (GL's y axis points up).
+        // Sample at (0,0), (W,0), (0,H): far-apart points keep the slopes precise in float.
         evalVertex(-0.5f, 0.5f, p0)
-        evalVertex(1f / resX - 0.5f, 0.5f, px)
-        evalVertex(-0.5f, 0.5f - 1f / resY, py)
+        evalVertex(0.5f, 0.5f, px)
+        evalVertex(-0.5f, -0.5f, py)
         affine(0, objectUV)
         affine(2, responsiveUV)
         affine(4, patternUV)
@@ -92,8 +93,8 @@ class PaperSizing {
     }
 
     private fun affine(o: Int, out: FloatArray) {
-        out[0] = px[o] - p0[o]; out[1] = py[o] - p0[o]; out[2] = p0[o]
-        out[3] = px[o + 1] - p0[o + 1]; out[4] = py[o + 1] - p0[o + 1]; out[5] = p0[o + 1]
+        out[0] = (px[o] - p0[o]) / resX; out[1] = (py[o] - p0[o]) / resY; out[2] = p0[o]
+        out[3] = (px[o + 1] - p0[o + 1]) / resX; out[4] = (py[o + 1] - p0[o + 1]) / resY; out[5] = p0[o + 1]
     }
 
     private fun pixelSize(m: FloatArray): Float = sqrt(abs(m[0] * m[4] - m[1] * m[3]))
