@@ -38,8 +38,8 @@ import com.paperdesign.shaders.specs.ShaderCatalog
 
 /** Entry point: a grid of every ported shader; tapping one opens its playground. */
 @Composable
-fun ShaderGalleryApp() {
-    var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
+fun ShaderGalleryApp(initialShaderId: String? = null) {
+    var selectedId by rememberSaveable { mutableStateOf(initialShaderId) }
     val selected = ShaderCatalog.all.firstOrNull { it.id == selectedId }
     if (selected == null) {
         GalleryScreen(onOpen = { selectedId = it.id })

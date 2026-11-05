@@ -23,7 +23,8 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = Color.Black
                 ) {
-                    ShaderGalleryApp()
+                    // `adb shell am start -n com.paperdesign.warp/com.example.warpshader.MainActivity --es shader warp`
+                    ShaderGalleryApp(initialShaderId = intent.getStringExtra("shader"))
                 }
             }
         }

@@ -61,7 +61,7 @@ fun ShaderPlayground(spec: ShaderSpec, onBack: () -> Unit) {
     val state = remember(spec) { ShaderState(spec) }
     val clock = remember(spec) { ShaderClock(state.float("frame")) }
     var playing by rememberSaveable(spec.id) { mutableStateOf(true) }
-    var showControls by rememberSaveable(spec.id) { mutableStateOf(true) }
+    var showControls by rememberSaveable(spec.id) { mutableStateOf(false) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 

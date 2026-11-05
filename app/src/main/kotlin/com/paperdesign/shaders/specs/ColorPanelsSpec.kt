@@ -17,7 +17,7 @@ val ColorPanelsSpec = ShaderSpec(
         FloatParam("density", "Density", "u_density", 0.25f, 7.0f, step = 0.0f),
         FloatParam("angle1", "Angle1", "u_angle1", -1.0f, 1.0f, step = 0.0f),
         FloatParam("angle2", "Angle2", "u_angle2", -1.0f, 1.0f, step = 0.0f),
-        FloatParam("length", "Length", "u_colorsCount", 0.0f, 3.0f, step = 0.0f),
+        FloatParam("length", "Length", "u_length", 0.0f, 3.0f, step = 0.0f),
         BoolParam("edges", "Edges", "u_edges"),
         FloatParam("blur", "Blur", "u_blur", 0.0f, 0.5f, step = 0.0f),
         FloatParam("fadeIn", "Fade in", "u_fadeIn", 0.0f, 1.0f, step = 0.0f),

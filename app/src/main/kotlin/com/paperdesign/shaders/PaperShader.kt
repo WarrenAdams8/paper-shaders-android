@@ -75,7 +75,12 @@ fun PaperShader(
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         val program = remember(state.spec) {
-            runCatching { ShaderProgram(state.spec, ShaderAssets.body(state.spec)) }
+            runCatching {
+                val t0 = System.nanoTime()
+                ShaderProgram(state.spec, ShaderAssets.body(state.spec)).also {
+                    Log.d("PaperShader", "compiled ${state.spec.id} in ${(System.nanoTime() - t0) / 1_000_000} ms")
+                }
+            }
                 .onFailure { Log.e("PaperShader", "AGSL compile failed for ${state.spec.id}", it) }
                 .getOrNull()
         }
