@@ -23,6 +23,36 @@ class ShaderCompileTest {
         ShaderAssets.init(InstrumentationRegistry.getInstrumentation().targetContext)
     }
 
+    /**
+     * Saves each shader's default preset as a PNG (app external files dir, `renders/`) for a
+     * visual check on devices where screenshots are unavailable (e.g. ATD emulator images).
+     * Run with `-Pandroid.testInstrumentationRunnerArguments.saveRenders=true`.
+     */
+    @Test
+    fun saveDefaultPresetRenders() {
+        val args = InstrumentationRegistry.getArguments()
+        assumeTrue(args.getString("saveRenders") == "true")
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val dir = java.io.File(context.getExternalFilesDir(null), "renders").apply { mkdirs() }
+        val w = 360
+        val h = 780
+        for (spec in ShaderCatalog.all) {
+            val program = ShaderProgram(spec, ShaderAssets.body(spec))
+            val state = ShaderState(spec)
+            val sample = ShaderAssets.sample(spec.sampleImage)
+            val image = spec.preprocess?.let { ShaderAssets.process(sample, it) } ?: sample
+            program.update(state, w.toFloat(), h.toFloat(), 1f, 3000f, image)
+            val picture = Picture()
+            picture.beginRecording(w, h).drawRect(0f, 0f, w.toFloat(), h.toFloat(), Paint().apply { shader = program.shader })
+            picture.endRecording()
+            // Null when the device has no GPU rendering (e.g. ATD images).
+            val hw: Bitmap? = Bitmap.createBitmap(picture)
+            assumeTrue("No hardware rendering on this device", hw != null)
+            val bmp = hw!!.copy(Bitmap.Config.ARGB_8888, false)
+            java.io.File(dir, "${spec.id}.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        }
+    }
+
     @Test
     fun allShadersCompileAndRenderEveryPreset() {
         val failures = mutableListOf<String>()
