@@ -107,7 +107,6 @@ class ShaderProgram(val spec: ShaderSpec, body: String) {
         setF("u_responsivePx", sizing.responsivePx)
         setF("u_patternPx", sizing.patternPx)
         setF("u_imagePx", sizing.imagePx)
-        setF("u_isImage", 1f)
 
         for (p in spec.params) {
             if (!has(p.uniform)) continue

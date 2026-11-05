@@ -12,6 +12,8 @@ val PaperTextureSpec = ShaderSpec(
     sizing = SizingKind.IMAGE,
     usesImage = true,
     params = listOf(
+        // Upstream sets u_isImage when an image is passed; here it is an explicit toggle.
+        BoolParam("useImage", "Use image", "u_isImage"),
         ColorParam("colorBack", "Color back", "u_colorBack"),
         ColorParam("colorPaper", "Color paper", "u_colorPaper"),
         ColorParam("colorShadow", "Color shadow", "u_colorShadow"),
@@ -36,6 +38,7 @@ val PaperTextureSpec = ShaderSpec(
         FloatParam("crumpleCount", "Crumple count", "u_crumpleCount", 2.0f, 15.0f, step = 1.0f),
         FloatParam("drops", "Drops", "u_drops", 0.0f, 1.0f, step = 0.0f),
     ),
+    defaults = mapOf("useImage" to true),
     presets = listOf(
         Preset(
             "Default",

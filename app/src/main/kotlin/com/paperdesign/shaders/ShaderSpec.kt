@@ -87,8 +87,23 @@ data class ShaderSpec(
     val usesImage: Boolean,
     val params: List<ParamDef>,
     val presets: List<Preset>,
+    /** Values applied before any preset (for params that upstream derives from props). */
+    val defaults: Map<String, Any> = emptyMap(),
+    /** Which bundled image an image shader starts with. */
+    val sampleImage: SampleImage = SampleImage.PHOTO,
+    /** CPU preprocessing upstream runs on the image before upload, if any. */
+    val preprocess: ImagePreprocess? = null,
 ) {
     val defaultPreset: Preset get() = presets.first()
+}
+
+enum class SampleImage { PHOTO, SHAPE }
+
+/** Upstream `toProcessed*` image preprocessing steps, ported in [ImageProcessing]. */
+enum class ImagePreprocess(val run: (android.graphics.Bitmap) -> android.graphics.Bitmap) {
+    HEATMAP({ ImageProcessing.heatmap(it) }),
+    GEM_SMOKE({ ImageProcessing.poissonRoundness(it, padding = 0.025f, iterations = 32, smoothingPasses = 3) }),
+    LIQUID_METAL({ ImageProcessing.poissonRoundness(it, padding = 0f, iterations = 40, smoothingPasses = 0) }),
 }
 
 /** Sizing and motion parameters every shader shares (the upstream "common params"). */

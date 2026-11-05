@@ -1,5 +1,6 @@
 package com.paperdesign.shaders
 
+import android.graphics.Bitmap
 import android.os.Build
 import android.util.Log
 import androidx.compose.foundation.layout.Box
@@ -8,6 +9,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -21,6 +23,8 @@ import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** Animation clock in Paper's units: `timeMs` advances by `dt_ms * speed`. */
 @Stable
@@ -89,6 +93,7 @@ fun PaperShader(
             return
         }
         val brush = remember(program) { ShaderBrush(program.shader) }
+        val image = rememberShaderImage(state)
         Box(
             modifier.drawBehind {
                 program.update(
@@ -97,7 +102,7 @@ fun PaperShader(
                     height = size.height,
                     density = density,
                     timeMs = clock.timeMs,
-                    image = state.image ?: ShaderAssets.sampleImage,
+                    image = image,
                 )
                 drawRect(brush)
             },
@@ -107,12 +112,28 @@ fun PaperShader(
     }
 }
 
+/**
+ * The bitmap bound to `u_image`: the picked image or the spec's sample, run through the spec's
+ * preprocessing (on a background thread, cached) when it has one.
+ */
+@Composable
+private fun rememberShaderImage(state: ShaderState): Bitmap? {
+    val spec = state.spec
+    if (!spec.usesImage) return null
+    val source = state.image ?: ShaderAssets.sample(spec.sampleImage)
+    val step = spec.preprocess ?: return source
+    val processed by produceState(ShaderAssets.cachedProcessed(source, step), source, step) {
+        if (value == null) value = withContext(Dispatchers.Default) { ShaderAssets.process(source, step) }
+    }
+    return processed ?: ShaderAssets.transparentPixel
+}
+
 /** Pre-AGSL fallback: a radial gradient of the shader's colors, or the source image. */
 private fun Modifier.fallback(state: ShaderState): Modifier = drawWithCache {
     @Suppress("UNUSED_VARIABLE") val v = state.version
     val spec = state.spec
     if (spec.usesImage) {
-        val img = (state.image ?: ShaderAssets.sampleImage).asImageBitmap()
+        val img = (state.image ?: ShaderAssets.sample(spec.sampleImage)).asImageBitmap()
         onDrawBehind {
             val s = maxOf(size.width / img.width, size.height / img.height)
             val dw = (img.width * s).toInt()

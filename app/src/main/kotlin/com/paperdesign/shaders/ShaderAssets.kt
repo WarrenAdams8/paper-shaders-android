@@ -48,6 +48,53 @@ object ShaderAssets {
     /** Bundled sample photo-like image for the image filters. Drawn once, procedurally. */
     val sampleImage: Bitmap by lazy { drawSampleImage(1024, 1024) }
 
+    /** Bundled sample logo-like shape (opaque star on transparency) for the shape-mask shaders. */
+    val sampleShape: Bitmap by lazy { drawSampleShape(1024) }
+
+    /** Upstream's `transparentPixel`, shown while an image is still being processed. */
+    val transparentPixel: Bitmap by lazy { Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888) }
+
+    fun sample(kind: SampleImage): Bitmap = when (kind) {
+        SampleImage.PHOTO -> sampleImage
+        SampleImage.SHAPE -> sampleShape
+    }
+
+    private val processed = object : LinkedHashMap<Pair<Bitmap, ImagePreprocess>, Bitmap>(8, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Pair<Bitmap, ImagePreprocess>, Bitmap>) = size > 6
+    }
+
+    fun cachedProcessed(source: Bitmap, step: ImagePreprocess): Bitmap? = synchronized(processed) { processed[source to step] }
+
+    /** Runs [step] on [source] (slow: call off the main thread) and caches the result. */
+    fun process(source: Bitmap, step: ImagePreprocess): Bitmap {
+        cachedProcessed(source, step)?.let { return it }
+        val out = step.run(source)
+        synchronized(processed) { processed[source to step] = out }
+        return out
+    }
+
+    private fun drawSampleShape(size: Int): Bitmap {
+        val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        val p = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFF000000.toInt()
+            pathEffect = android.graphics.CornerPathEffect(size * 0.06f)
+        }
+        val path = Path()
+        val cx = size / 2f
+        val cy = size * 0.53f
+        for (i in 0 until 10) {
+            val r = if (i % 2 == 0) size * 0.46f else size * 0.22f
+            val a = -Math.PI / 2 + i * Math.PI / 5
+            val x = cx + (r * kotlin.math.cos(a)).toFloat()
+            val y = cy + (r * kotlin.math.sin(a)).toFloat()
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        path.close()
+        c.drawPath(path, p)
+        return bmp
+    }
+
     private fun drawSampleImage(w: Int, h: Int): Bitmap {
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)

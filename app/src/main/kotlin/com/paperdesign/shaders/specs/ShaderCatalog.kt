@@ -32,5 +32,8 @@ object ShaderCatalog {
         LensDistortionSpec,
         PaperTextureSpec,
         WaterSpec,
+        HeatmapSpec,
+        GemSmokeSpec,
+        LiquidMetalSpec,
     )
 }

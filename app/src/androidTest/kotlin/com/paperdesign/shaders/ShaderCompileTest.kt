@@ -32,7 +32,9 @@ class ShaderCompileTest {
             for (preset in spec.presets) {
                 runCatching {
                     val state = ShaderState(spec, preset)
-                    program.update(state, 64f, 96f, 2f, 1000f, ShaderAssets.sampleImage)
+                    val sample = ShaderAssets.sample(spec.sampleImage)
+                    val image = spec.preprocess?.let { ShaderAssets.process(sample, it) } ?: sample
+                    program.update(state, 64f, 96f, 2f, 1000f, image)
                     // RuntimeShader needs hardware rendering; a Picture-backed bitmap renders on the GPU.
                     val picture = Picture()
                     picture.beginRecording(64, 96).drawRect(0f, 0f, 64f, 96f, Paint().apply { shader = program.shader })

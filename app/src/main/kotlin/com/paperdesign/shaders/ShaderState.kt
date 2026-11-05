@@ -35,6 +35,7 @@ class ShaderState(val spec: ShaderSpec, preset: Preset = spec.defaultPreset) {
     fun applyPreset(preset: Preset) {
         values.clear()
         values.putAll(DEFAULTS)
+        values.putAll(spec.defaults)
         values.putAll(spec.defaultPreset.values)
         values.putAll(preset.values)
         presetName = preset.name
