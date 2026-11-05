@@ -340,7 +340,7 @@ private val MetalPreset = Preset(
     mapOf(
         "fit" to "contain",
         "scale" to 1.0f,
-        "speed" to 1.0f,
+        "speed" to 0.5f,
         "useImage" to true,
         "colorBack" to color(0x00000000L),
         "colorTint" to color(0xffffffffL),
@@ -468,8 +468,8 @@ private fun warpPreset(name: String, vararg argb: Long, rotation: Float) = Prese
         "fit" to "none",
         "scale" to 1.0f,
         "rotation" to rotation,
-        // Paper's own presets run at 3-20; below ~3 the warp barely drifts.
-        "speed" to 5.0f,
+        // Slow ambient drift; the edge shape still keeps the boundary visibly moving.
+        "speed" to 1.5f,
         "offsetY" to EDGE_OFFSET_Y,
         "colors" to colors(*argb),
         "proportion" to 0.45f,
