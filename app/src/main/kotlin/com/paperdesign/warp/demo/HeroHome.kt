@@ -1,21 +1,6 @@
 package com.paperdesign.warp.demo
 
 import androidx.compose.foundation.Canvas
-import android.graphics.Bitmap
-import android.os.Build
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.graphics.Canvas as ComposeCanvas
-import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.drawText
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.LayoutDirection
-import com.paperdesign.shaders.color
-import com.paperdesign.shaders.specs.LiquidMetalSpec
 import androidx.compose.foundation.background
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.outlined.LocalFireDepartment
@@ -256,7 +241,7 @@ private fun Headline(theme: HeroTheme) {
             }
         }
         if (theme.numeral != null) {
-            LiquidMetalText(
+            Text(
                 theme.numeral,
                 style = TextStyle(
                     brush = gloss,
@@ -270,10 +255,10 @@ private fun Headline(theme: HeroTheme) {
             Text(theme.numeralCaption, color = Color.White.copy(alpha = 0.8f), fontSize = 16.sp, modifier = Modifier.padding(bottom = 4.dp))
             Text(theme.title, color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Black, letterSpacing = (-1).sp)
         } else {
-            LiquidMetalText(
+            Text(
                 theme.title,
+                textAlign = TextAlign.Center,
                 style = TextStyle(
-                    textAlign = TextAlign.Center,
                     brush = gloss,
                     fontSize = 92.sp,
                     lineHeight = 84.sp,
@@ -289,71 +274,6 @@ private fun Headline(theme: HeroTheme) {
         }
     }
 }
-
-/**
- * Text filled with Paper's Liquid Metal shader (API 33+), the way Paper applies it to a logo:
- * the laid-out glyphs are rasterised once into a mask bitmap, which the shader's own
- * preprocessing turns into a bevel map. Below it sits the same text with a static chrome
- * gradient, which is what API 24-32 shows and what keeps the shape readable while the mask
- * is being processed.
- */
-@Composable
-private fun LiquidMetalText(text: String, style: TextStyle) {
-    var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
-    val padPx = with(LocalDensity.current) { MetalPad.roundToPx() }
-    Box {
-        val metalOn = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-        Text(
-            text,
-            // With metal on top, the underlay only shows as a soft light halo that lifts the
-            // darker metal bands off the black page.
-            style = if (metalOn) style.copy(shadow = MetalHalo) else style,
-            onTextLayout = { layout = it },
-            modifier = Modifier.padding(MetalPad),
-        )
-        if (metalOn) {
-            val metal = remember { ShaderState(LiquidMetalSpec, MetalPreset) }
-            val mask = remember(layout) { layout?.let { textMask(it, padPx) } }
-            if (mask != null && metal.image !== mask) metal.image = mask
-            if (mask != null) PaperShader(metal, Modifier.matchParentSize())
-        }
-    }
-}
-
-/** White glyphs on transparent, with room around them for italic overhang and the bevel. */
-private fun textMask(layout: TextLayoutResult, padPx: Int): Bitmap {
-    val w = layout.size.width + 2 * padPx
-    val h = layout.size.height + 2 * padPx
-    val image = ImageBitmap(w, h)
-    CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, ComposeCanvas(image), Size(w.toFloat(), h.toFloat())) {
-        drawText(layout, color = Color.White, topLeft = Offset(padPx.toFloat(), padPx.toFloat()), shadow = Shadow.None)
-    }
-    return image.asAndroidBitmap()
-}
-
-private val MetalPad = 12.dp
-
-private val MetalHalo = Shadow(Color.White.copy(alpha = 0.30f), blurRadius = 36f)
-
-private val MetalPreset = Preset(
-    "Hero Metal",
-    mapOf(
-        "fit" to "contain",
-        "scale" to 1.0f,
-        "speed" to 0.5f,
-        "useImage" to true,
-        "colorBack" to color(0x00000000L),
-        "colorTint" to color(0xffffffffL),
-        "distortion" to 0.07f,
-        "repetition" to 1.6f,
-        "shiftRed" to 0.3f,
-        "shiftBlue" to 0.3f,
-        "contour" to 0.4f,
-        "softness" to 0.1f,
-        "angle" to 70.0f,
-        "shape" to "none",
-    ),
-)
 
 @Composable
 private fun PrimaryButton(theme: HeroTheme) {
