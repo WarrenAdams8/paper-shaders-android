@@ -37,7 +37,7 @@ import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Hexagon
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Photo
+import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.ShowChart
@@ -177,7 +177,7 @@ fun ShaderControls(
         if (spec.usesImage) {
             ControlRow("Image", if (state.image == null) "Sample" else "Your photo") {
                 RoundButton(Icons.Filled.Image, "Sample image", selected = state.image == null, onClick = { state.image = null })
-                RoundButton(Icons.Filled.Photo, "Pick a photo", selected = state.image != null, onClick = onPickImage)
+                RoundButton(Icons.Filled.AddPhotoAlternate, "Pick a photo", selected = state.image != null, onClick = onPickImage)
             }
         }
         spec.params.forEach { p -> ParamRow(p, state, onEditColor = { editingColor = it }) }

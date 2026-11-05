@@ -30,6 +30,7 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
@@ -104,7 +105,7 @@ fun ShaderPlayground(spec: ShaderSpec, onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             spec.interactionHint?.let { hint ->
-                Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f)) {
+                Surface(shape = RoundedCornerShape(50), color = OverlayPill, contentColor = ControlColors.Label) {
                     Text(hint, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
                 }
             }
@@ -113,7 +114,8 @@ fun ShaderPlayground(spec: ShaderSpec, onBack: () -> Unit) {
                     selected = gestures,
                     onClick = { gestures = !gestures },
                     label = { Text("Pan · zoom · rotate") },
-                    colors = FilterChipDefaults.filterChipColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f)),
+                    colors = overlayChipColors(),
+                    border = null,
                     modifier = Modifier.testTag("toggle-gestures"),
                 )
                 if (!spec.usesTilt) {
@@ -121,7 +123,8 @@ fun ShaderPlayground(spec: ShaderSpec, onBack: () -> Unit) {
                         selected = tiltParallax,
                         onClick = { tiltParallax = !tiltParallax },
                         label = { Text("Tilt parallax") },
-                        colors = FilterChipDefaults.filterChipColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f)),
+                        colors = overlayChipColors(),
+                    border = null,
                         modifier = Modifier.testTag("toggle-tilt"),
                     )
                 }
@@ -136,26 +139,27 @@ fun ShaderPlayground(spec: ShaderSpec, onBack: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            FilledTonalIconButton(onClick = onBack) {
+            FilledTonalIconButton(onClick = onBack, colors = overlayButtonColors()) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
             }
-            Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f)) {
+            Surface(shape = RoundedCornerShape(50), color = OverlayPill, contentColor = ControlColors.Label) {
                 Column(Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
                     Text(spec.title, style = MaterialTheme.typography.titleSmall)
                     Text(
                         if (spec.animated && playing) "${clock.fps.roundToInt()} fps · ${state.presetName}" else state.presetName,
                         style = MaterialTheme.typography.labelSmall,
+                        color = ControlColors.Value,
                         modifier = Modifier.testTag("fps"),
                     )
                 }
             }
             Box(Modifier.weight(1f))
             if (spec.animated) {
-                FilledTonalIconButton(onClick = { playing = !playing }) {
+                FilledTonalIconButton(onClick = { playing = !playing }, colors = overlayButtonColors()) {
                     Icon(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow, contentDescription = if (playing) "Pause" else "Play")
                 }
             }
-            FilledTonalIconButton(onClick = { showControls = true }, modifier = Modifier.testTag("open-controls")) {
+            FilledTonalIconButton(onClick = { showControls = true }, colors = overlayButtonColors(), modifier = Modifier.testTag("open-controls")) {
                 Icon(Icons.Filled.Tune, contentDescription = "Controls")
             }
         }
@@ -180,6 +184,23 @@ fun ShaderPlayground(spec: ShaderSpec, onBack: () -> Unit) {
         }
     }
 }
+
+/** Overlay controls use the controls-sheet palette so they read on any shader, light or dark. */
+private val OverlayPill = ControlColors.Sheet.copy(alpha = 0.78f)
+
+@Composable
+private fun overlayButtonColors() = IconButtonDefaults.filledTonalIconButtonColors(
+    containerColor = OverlayPill,
+    contentColor = ControlColors.Label,
+)
+
+@Composable
+private fun overlayChipColors() = FilterChipDefaults.filterChipColors(
+    containerColor = OverlayPill,
+    labelColor = ControlColors.Label,
+    selectedContainerColor = ControlColors.Selected,
+    selectedLabelColor = ControlColors.SelectedIcon,
+)
 
 /** How far (in graphic-box units) a full tilt moves the pattern in parallax mode. */
 private const val TILT_PARALLAX = 0.6f
