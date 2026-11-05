@@ -1,0 +1,137 @@
+// @varyings 
+uniform float u_originX;
+uniform float u_originY;
+uniform float u_fit;
+uniform float u_scale;
+uniform float u_rotation;
+uniform float u_offsetX;
+uniform float u_offsetY;
+uniform vec4 u_colorFront;
+uniform vec4 u_colorBack;
+uniform vec4 u_colorHighlight;
+uniform float u_imageAspectRatio;
+uniform float u_type;
+uniform float u_pxSize;
+uniform float u_originalColors;
+uniform float u_inverted;
+uniform float u_colorSteps;
+vec4 sampleImage(vec2 uv) {
+  vec4 image = paper_image( uv);
+  image.rgb /= max(image.a, .0001);
+  return image;
+}
+  float hash21(vec2 p) {
+    p = fract(p * vec2(0.3183099, 0.3678794)) + 0.1;
+    p += dot(p, p + 19.19);
+    return fract(p.x * p.y);
+  }
+const float TWO_PI = 6.28318530718;
+const float PI = 3.14159265358979323846;
+float getUvFrame(vec2 uv, vec2 pad) {
+  float aa = 0.0001;
+  float left   = smoothstep(-pad.x, -pad.x + aa, uv.x);
+  float right  = smoothstep(1.0 + pad.x, 1.0 + pad.x - aa, uv.x);
+  float bottom = smoothstep(-pad.y, -pad.y + aa, uv.y);
+  float top    = smoothstep(1.0 + pad.y, 1.0 + pad.y - aa, uv.y);
+  return left * right * bottom * top;
+}
+vec2 getImageUV(vec2 uv) {
+  vec2 boxOrigin = vec2(.5 - u_originX, u_originY - .5);
+  float r = u_rotation * PI / 180.;
+  mat2 graphicRotation = mat2(cos(r), sin(r), -sin(r), cos(r));
+  vec2 graphicOffset = vec2(-u_offsetX, u_offsetY);
+  vec2 imageBoxSize;
+  if (u_fit == 1.) { // contain
+    imageBoxSize.x = min(u_resolution.x / u_imageAspectRatio, u_resolution.y) * u_imageAspectRatio;
+  } else if (u_fit == 2.) { // cover
+    imageBoxSize.x = max(u_resolution.x / u_imageAspectRatio, u_resolution.y) * u_imageAspectRatio;
+  } else {
+    imageBoxSize.x = min(10.0, 10.0 / u_imageAspectRatio * u_imageAspectRatio);
+  }
+  imageBoxSize.y = imageBoxSize.x / u_imageAspectRatio;
+  vec2 imageBoxScale = u_resolution.xy / imageBoxSize;
+  vec2 imageUV = uv;
+  imageUV *= imageBoxScale;
+  imageUV += boxOrigin * (imageBoxScale - 1.);
+  imageUV += graphicOffset;
+  imageUV /= u_scale;
+  imageUV.x *= u_imageAspectRatio;
+  imageUV = graphicRotation * imageUV;
+  imageUV.x /= u_imageAspectRatio;
+  imageUV += .5;
+  imageUV.y = 1. - imageUV.y;
+  return imageUV;
+}
+// AGSL has no array constructors: the upstream Bayer tables are rebuilt arithmetically.
+// bayer2(p), p in {0,1}^2 reproduces {0, 2, 3, 1}; larger sizes use the recursive rule
+// B(2n)(p) = 4 * B(n)(p mod n) + B2(floor(p / n)), which matches the upstream 4x4 and 8x8 tables.
+float bayer2(vec2 p) { return 2. * p.x + 3. * p.y - 4. * p.x * p.y; }
+float bayer4(vec2 p) { return 4. * bayer2(mod(p, 2.)) + bayer2(floor(p / 2.)); }
+float bayer8(vec2 p) { return 4. * bayer4(mod(p, 4.)) + bayer2(floor(p / 4.)); }
+float getBayerValue(vec2 uv, float size) {
+  vec2 pos = floor(fract(uv / size) * size);
+  if (size == 2.) {
+    return bayer2(pos) / 4.0;
+  } else if (size == 4.) {
+    return bayer4(pos) / 16.0;
+  } else if (size == 8.) {
+    return bayer8(pos) / 64.0;
+  }
+  return 0.0;
+}
+half4 main(float2 fragCoord) {
+  float2 fragCoordGL = float2(fragCoord.x, u_resolution.y - fragCoord.y);
+  vec4 fragColor = vec4(0.);
+  float pxSize = u_pxSize * u_pixelRatio;
+  vec2 pxSizeUV = fragCoordGL.xy - .5 * u_resolution;
+  pxSizeUV /= pxSize;
+  vec2 canvasPixelizedUV = (floor(pxSizeUV) + .5) * pxSize;
+  vec2 normalizedUV = canvasPixelizedUV / u_resolution;
+  vec2 imageUV = getImageUV(normalizedUV);
+  vec2 ditheringNoiseUV = canvasPixelizedUV;
+  vec4 image = sampleImage(imageUV);
+  float frame = getUvFrame(imageUV, pxSize / u_resolution);
+  float type = floor(u_type);
+  float dithering = 0.0;
+  float lum = dot(vec3(.2126, .7152, .0722), image.rgb);
+  lum = (u_inverted > .5) ? (1. - lum) : lum;
+  if (type == 1.) {
+    dithering = step(hash21(ditheringNoiseUV), lum);
+  } else if (type == 2.) {
+    dithering = getBayerValue(pxSizeUV, 2.);
+  } else if (type == 3.) {
+    dithering = getBayerValue(pxSizeUV, 4.);
+  } else {
+    dithering = getBayerValue(pxSizeUV, 8.);
+  }
+  float colorSteps = max(floor(u_colorSteps), 1.);
+  vec3 color = vec3(0.0);
+  float opacity = 1.;
+  dithering -= .5;
+  float brightness = clamp(lum + dithering / colorSteps, 0.0, 1.0);
+  brightness = mix(0.0, brightness, frame);
+  brightness = mix(0.0, brightness, image.a);
+  float quantLum = floor(brightness * colorSteps + 0.5) / colorSteps;
+  quantLum = mix(0.0, quantLum, frame);
+  if (u_originalColors > .5) {
+    vec3 normColor = image.rgb / max(lum, 0.001);
+    color = normColor * quantLum;
+    float quantAlpha = floor(image.a * colorSteps + 0.5) / colorSteps;
+    opacity = mix(quantLum, 1., quantAlpha);
+  } else {
+    vec3 fgColor = u_colorFront.rgb * u_colorFront.a;
+    float fgOpacity = u_colorFront.a;
+    vec3 bgColor = u_colorBack.rgb * u_colorBack.a;
+    float bgOpacity = u_colorBack.a;
+    vec3 hlColor = u_colorHighlight.rgb * u_colorHighlight.a;
+    float hlOpacity = u_colorHighlight.a;
+    fgColor = mix(fgColor, hlColor, step(1.02 - .02 * u_colorSteps, brightness));
+    fgOpacity = mix(fgOpacity, hlOpacity, step(1.02 - .02 * u_colorSteps, brightness));
+    color = fgColor * quantLum;
+    opacity = fgOpacity * quantLum;
+    color += bgColor * (1.0 - opacity);
+    opacity += bgOpacity * (1.0 - opacity);
+  }
+  fragColor = vec4(color, opacity);
+  return half4(fragColor);
+}

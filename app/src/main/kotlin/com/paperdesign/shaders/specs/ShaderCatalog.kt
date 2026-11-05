@@ -25,5 +25,12 @@ object ShaderCatalog {
         VoronoiSpec,
         WarpSpec,
         WavesSpec,
+        FlutedGlassSpec,
+        HalftoneCmykSpec,
+        HalftoneDotsSpec,
+        ImageDitheringSpec,
+        LensDistortionSpec,
+        PaperTextureSpec,
+        WaterSpec,
     )
 }
