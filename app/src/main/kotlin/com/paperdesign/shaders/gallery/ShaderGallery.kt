@@ -38,14 +38,26 @@ import com.paperdesign.shaders.ShaderClock
 import com.paperdesign.shaders.ShaderSpec
 import com.paperdesign.shaders.ShaderState
 import com.paperdesign.shaders.specs.ShaderCatalog
+import com.paperdesign.shaders.specs.WarpSpec
+import com.paperdesign.warp.demo.HeroHomeScreen
+import com.paperdesign.warp.demo.HeroThemes
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 
 /** Entry point: a grid of every ported shader; tapping one opens its playground. */
 @Composable
 fun ShaderGalleryApp(initialShaderId: String? = null) {
     var selectedId by rememberSaveable { mutableStateOf(initialShaderId) }
+    if (selectedId == HERO_HOME_ID) {
+        BackHandler { selectedId = null }
+        HeroHomeScreen()
+        return
+    }
     val selected = ShaderCatalog.all.firstOrNull { it.id == selectedId }
     if (selected == null) {
-        GalleryScreen(onOpen = { selectedId = it.id })
+        GalleryScreen(onOpen = { selectedId = it.id }, onOpenHero = { selectedId = HERO_HOME_ID })
     } else {
         BackHandler { selectedId = null }
         ShaderPlayground(spec = selected, onBack = { selectedId = null })
@@ -54,7 +66,7 @@ fun ShaderGalleryApp(initialShaderId: String? = null) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun GalleryScreen(onOpen: (ShaderSpec) -> Unit) {
+private fun GalleryScreen(onOpen: (ShaderSpec) -> Unit, onOpenHero: () -> Unit) {
     val scroll = TopAppBarDefaults.enterAlwaysScrollBehavior()
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
@@ -77,6 +89,8 @@ private fun GalleryScreen(onOpen: (ShaderSpec) -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxSize().testTag("gallery"),
         ) {
+            section("Examples", "App screens built on a shader")
+            item(key = HERO_HOME_ID) { HeroHomeTile(onClick = onOpenHero) }
             section("Interactive · touch and tilt", "Original shaders made for this app")
             items(ShaderCatalog.originals, key = { it.id }) { spec ->
                 GalleryTile(spec, onClick = { onOpen(spec) })
@@ -125,5 +139,43 @@ private fun GalleryTile(spec: ShaderSpec, onClick: () -> Unit) {
         )
     }
 }
+
+/** Thumbnail for the hero home example: a frozen frame of its Warp header. */
+@Composable
+private fun HeroHomeTile(onClick: () -> Unit) {
+    val state = remember { ShaderState(WarpSpec, HeroThemes[0].preset) }
+    Column(
+        Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+            .testTag("tile-$HERO_HOME_ID"),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(20.dp)),
+        ) {
+            val clock = remember { ShaderClock(THUMBNAIL_TIME_MS) }
+            PaperShader(state, Modifier.fillMaxSize(), playing = false, clock = clock)
+            Text(
+                "stride",
+                color = Color.White,
+                fontWeight = FontWeight.Black,
+                fontStyle = FontStyle.Italic,
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.align(Alignment.Center),
+            )
+        }
+        Text(
+            "Hero home",
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
+        )
+    }
+}
+
+/** Gallery id (and `--es shader` deep link value) for the hero home example. */
+const val HERO_HOME_ID = "hero-home"
 
 private const val THUMBNAIL_TIME_MS = 12_000f
