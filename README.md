@@ -1,4 +1,70 @@
-# Paper Design Warp Shader for Android
+# Paper Shaders for Android
+
+An AGSL port of all 30 shaders from [paper-design/shaders](https://github.com/paper-design/shaders)
+(Apache-2.0), with a gallery app for trying every preset and parameter live.
+
+## Gallery
+
+- A grid of all shaders (static thumbnails). Tap one to open it full screen.
+- The controls sheet (tune icon) holds Paper's presets, every shader parameter (sliders, options,
+  switches, color pickers, color lists), and the shared sizing and motion params (fit, scale,
+  rotation, offset, origin, world size, speed, frame).
+- Image shaders use a bundled sample image. Use **Pick image** to load your own via the photo picker.
+- The header shows the live frame rate for animated shaders.
+
+Open a shader directly: `adb shell am start -n com.paperdesign.warp/com.example.warpshader.MainActivity --es shader warp`
+
+## Using a shader in your own Compose UI
+
+```kotlin
+val state = remember { ShaderState(MeshGradientSpec) }   // or ShaderState(spec, spec.presets[2])
+PaperShader(state, Modifier.fillMaxSize())
+state.set("distortion", 0.6f)                             // live edits only touch uniforms
+```
+
+## How the port works
+
+| Upstream (WebGL2) | Android (AGSL) |
+|---|---|
+| Vertex shader computes object/pattern/responsive/image UVs | `PaperSizing` runs the same math on the CPU and sends each UV as two affine rows |
+| `u_noiseTexture` (128x128 PNG) | `res/drawable-nodpi/paper_noise.png` bound with `setInputBuffer`, CLAMP + bilinear |
+| `texture(u_image, uv)` | `paper_image(uv)` = `u_image.eval(uv * size)` |
+| `fwidth`, `dFdx`, `dFdy` (not in AGSL) | Exact affine derivatives, analytic gradients, or forward differences at neighbour pixels (only when softness is near 0 for the expensive ones). Each site is commented in the `.agsl` file |
+| `%`, array constructors, dynamic indexing, `round`, `transpose`, `bool` uniforms | Rewritten with `mod`, arithmetic tables (Bayer), loop lookups, `floor(x + .5)`, inverse rotation, float uniforms |
+| JS image preprocessing (heatmap blurs, Poisson roundness for Liquid Metal / Gem Smoke) | `ImageProcessing.kt`, run on `Dispatchers.Default` and cached |
+
+Rendering cost: uniforms are pushed only after an edit or a resize; per frame only `u_time` is
+written, from a single reused frame callback, and state is read in the draw phase so animation
+does not recompose.
+
+Android 12 and lower (API 24-32) have no AGSL: shaders fall back to a radial gradient of their
+colors, and image shaders show the image.
+
+## Layout
+
+```
+app/src/main/assets/shaders/*.agsl            shader bodies (ported fragment shaders)
+app/src/main/kotlin/com/paperdesign/shaders/
+  ShaderSpec.kt, ShaderState.kt               params, presets, live values
+  ShaderProgram.kt, ShaderPrelude.kt          RuntimeShader + uniform upload, generated header
+  PaperSizing.kt                              CPU port of Paper's vertex shader
+  ImageProcessing.kt, ShaderAssets.kt         image preprocessing, noise texture, sample images
+  PaperShader.kt                              Compose renderer + fallback
+  specs/                                      one spec per shader + ShaderCatalog
+  gallery/                                    gallery, playground, controls, color picker
+```
+
+## Tests
+
+- `./gradlew :app:testDebugUnitTest`: sizing math, and spec/asset consistency (uniforms declared, no GLSL-only features, presets valid).
+- `./gradlew :app:connectedDebugAndroidTest`: compiles every shader and renders every preset on a device (API 33+).
+- `benchmark` build type: release-like, signed with the debug key, for measuring frame rates.
+
+---
+
+The original single-shader Warp library (`com.paperdesign.warp`) is still included and documented below.
+
+## Paper Design Warp Shader (original library)
 
 A high-performance Android rebuild of the **Paper Design Warp Shader** ([shaders.paper.design/warp](https://shaders.paper.design/warp)) using Android Graphics Shading Language (**AGSL**), `android.graphics.RuntimeShader`, and **Jetpack Compose**.
 
