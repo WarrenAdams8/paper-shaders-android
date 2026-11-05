@@ -88,7 +88,7 @@ fun HeroHomeScreen(modifier: Modifier = Modifier) {
             .background(PageBlack)
             .testTag("hero-home"),
     ) {
-        HeroBackground(warp, Modifier.fillMaxWidth().fillMaxHeight(0.52f))
+        HeroBackground(warp, Modifier.fillMaxWidth().fillMaxHeight(0.62f))
 
         Column(
             Modifier
@@ -131,10 +131,9 @@ private fun HeroBackground(warp: ShaderState, modifier: Modifier) {
         // Static overlay: drawn from a remembered brush, never recomposed per frame.
         val fade = remember {
             Brush.verticalGradient(
-                0.00f to Color.Black.copy(alpha = 0.08f),
-                0.30f to Color.Transparent,
-                0.62f to PageBlack.copy(alpha = 0.60f),
-                0.88f to PageBlack.copy(alpha = 0.95f),
+                // The warp draws its own wavy edge into the dark; this only hides the box's bottom edge.
+                0.00f to Color.Transparent,
+                0.78f to Color.Transparent,
                 1.00f to PageBlack,
             )
         }
@@ -228,7 +227,14 @@ private fun Headline(theme: HeroTheme) {
     }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         theme.badge?.let { badge ->
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 10.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .padding(bottom = 12.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.55f))
+                    .padding(start = 8.dp, end = 12.dp, top = 6.dp, bottom = 6.dp),
+            ) {
                 Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = theme.accent, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(badge.uppercase(), color = theme.accent, fontSize = 14.sp, fontWeight = FontWeight.Black, fontStyle = FontStyle.Italic, letterSpacing = 0.5.sp)
@@ -370,6 +376,9 @@ data class HeroTheme(
 
 private val PageBlack = Color(0xFF0B0C10)
 
+private const val EDGE_OFFSET_Y = 0.15f
+private const val EDGE_SCALE = 0.55f
+
 /** Keeps small white labels legible over the brightest parts of the gradient. */
 private val LabelShadow = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.35f), blurRadius = 10f))
 
@@ -377,25 +386,26 @@ private fun warpPreset(name: String, vararg argb: Long, rotation: Float) = Prese
     name,
     mapOf(
         "fit" to "none",
-        "scale" to 1.6f,
+        "scale" to 1.0f,
         "rotation" to rotation,
         // Paper's own presets run at 3-20; below ~3 the warp barely drifts.
-        "speed" to 8.0f,
+        "speed" to 5.0f,
+        "offsetY" to EDGE_OFFSET_Y,
         "colors" to colors(*argb),
         "proportion" to 0.45f,
         "softness" to 1.0f,
-        "distortion" to 0.25f,
-        "swirl" to 0.75f,
+        "distortion" to 0.2f,
+        "swirl" to 0.5f,
         "swirlIterations" to 9.0f,
-        "shapeScale" to 0.12f,
-        "shape" to "checks",
+        "shapeScale" to EDGE_SCALE,
+        "shape" to "edge",
     ),
 )
 
 val HeroThemes: List<HeroTheme> = listOf(
     HeroTheme(
         name = "Coral",
-        preset = warpPreset("Hero Coral", 0xffe8323aL, 0xffff6a55L, 0xffc4223aL, 0xffff8f73L, rotation = 20f),
+        preset = warpPreset("Hero Coral", 0xffff6a55L, 0xffef3a3fL, 0xffb01c30L, 0xff2e0a12L, 0xff0b0c10L, rotation = 0f),
         accent = Color(0xFFFF5A4E),
         ctaColor = Color(0xFFF6EEF2),
         badge = null,
@@ -412,7 +422,7 @@ val HeroThemes: List<HeroTheme> = listOf(
     ),
     HeroTheme(
         name = "Neon",
-        preset = warpPreset("Hero Neon", 0xff3dff5aL, 0xffc6ff2eL, 0xff17c94aL, 0xff8dff6bL, rotation = 200f),
+        preset = warpPreset("Hero Neon", 0xffc4ff3aL, 0xff3fe04aL, 0xff0f8a32L, 0xff05240fL, 0xff0b0c10L, rotation = 0f),
         accent = Color(0xFFD4FF3A),
         ctaColor = Color(0xFFF2F2EC),
         badge = "Session complete",
