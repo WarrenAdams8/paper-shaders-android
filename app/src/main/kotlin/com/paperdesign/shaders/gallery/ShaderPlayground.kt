@@ -92,7 +92,7 @@ fun ShaderPlayground(spec: ShaderSpec, onBack: () -> Unit) {
         }
     }
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         PaperShader(
             state,
             Modifier
@@ -188,8 +188,8 @@ fun ShaderPlayground(spec: ShaderSpec, onBack: () -> Unit) {
             onDismissRequest = { showControls = false },
             sheetState = sheet,
             // Translucent like the Pixel Camera settings sheet: the shader stays visible, dimmed.
-            scrimColor = Color.Black.copy(alpha = 0.15f),
-            containerColor = ControlColors.Sheet.copy(alpha = 0.78f),
+            scrimColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.15f),
+            containerColor = ControlColors.Sheet.copy(alpha = 0.82f),
             contentColor = ControlColors.Label,
             dragHandle = { BottomSheetDefaults.DragHandle(color = ControlColors.Handle) },
         ) {
@@ -204,7 +204,7 @@ fun ShaderPlayground(spec: ShaderSpec, onBack: () -> Unit) {
 }
 
 /** Overlay controls use the controls-sheet palette so they read on any shader, light or dark. */
-private val OverlayPill = ControlColors.Sheet.copy(alpha = 0.78f)
+private val OverlayPill: Color @Composable get() = ControlColors.Sheet.copy(alpha = 0.8f)
 
 @Composable
 private fun overlayButtonColors() = IconButtonDefaults.filledTonalIconButtonColors(

@@ -6,11 +6,10 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.foundation.background
@@ -98,18 +97,21 @@ import com.paperdesign.shaders.toColor
 import java.util.Locale
 import kotlin.math.roundToInt
 
-/** Camera-settings style palette for the controls sheet (always dark, whatever the theme). */
+/**
+ * Color roles for the controls, taken from the app's Material You scheme (wallpaper colors,
+ * system light/dark), so the camera-settings layout follows the user's theme.
+ */
 object ControlColors {
-    val Sheet = Color(0xFF131416)
-    val Handle = Color(0xFF5F6368)
-    val Label = Color(0xFFE3E3E3)
-    val Muted = Color(0xFF9AA0A6)
-    val Value = Color(0xFFA8C7FA)
-    val Chip = Color(0xFF2E3034)
-    val ChipIcon = Color(0xFFE3E3E3)
-    val Selected = Color(0xFFA8C7FA)
-    val SelectedIcon = Color(0xFF062E6F)
-    val Track = Color(0xFF3C4043)
+    val Sheet: Color @Composable get() = MaterialTheme.colorScheme.surfaceContainerLow
+    val Handle: Color @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+    val Label: Color @Composable get() = MaterialTheme.colorScheme.onSurface
+    val Muted: Color @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+    val Value: Color @Composable get() = MaterialTheme.colorScheme.primary
+    val Chip: Color @Composable get() = MaterialTheme.colorScheme.surfaceContainerHighest
+    val ChipIcon: Color @Composable get() = MaterialTheme.colorScheme.onSurface
+    val Selected: Color @Composable get() = MaterialTheme.colorScheme.primary
+    val SelectedIcon: Color @Composable get() = MaterialTheme.colorScheme.onPrimary
+    val Track: Color @Composable get() = MaterialTheme.colorScheme.secondaryContainer
 }
 
 /**
@@ -130,7 +132,7 @@ fun ShaderControls(
     var menuOpen by remember { mutableStateOf(false) }
     val spec = state.spec
 
-    MaterialExpressiveTheme(colorScheme = ControlScheme) {
+    run {
         Column(
             modifier
                 .fillMaxWidth()
@@ -228,19 +230,6 @@ fun ShaderControls(
         )
     }
 }
-
-/** Dark scheme so Material components pick up the camera-sheet palette. */
-private val ControlScheme = darkColorScheme(
-    primary = ControlColors.Selected,
-    onPrimary = ControlColors.SelectedIcon,
-    secondaryContainer = ControlColors.Chip,
-    onSecondaryContainer = ControlColors.Label,
-    surfaceContainer = ControlColors.Chip,
-    surfaceContainerHighest = ControlColors.Track,
-    surfaceContainerHigh = ControlColors.Chip,
-    onSurface = ControlColors.Label,
-    onSurfaceVariant = ControlColors.Muted,
-)
 
 /** A color being edited and how to write it back. */
 class ColorTarget(val current: ArgbColor, val apply: (ArgbColor) -> Unit)
@@ -447,7 +436,7 @@ private fun Swatch(c: ArgbColor, description: String, onClick: () -> Unit) {
             .clickable(role = Role.Button, onClick = onClick)
             .semantics { contentDescription = "$description color" }
             .padding(5.dp)
-            .border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
             .background(c.toColor(), CircleShape),
     )
 }
