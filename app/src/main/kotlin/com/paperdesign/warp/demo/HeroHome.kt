@@ -2,6 +2,13 @@ package com.paperdesign.warp.demo
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material.icons.outlined.LocalFireDepartment
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.automirrored.filled.ArrowRight
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,9 +29,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -84,7 +88,7 @@ fun HeroHomeScreen(modifier: Modifier = Modifier) {
             .background(PageBlack)
             .testTag("hero-home"),
     ) {
-        HeroBackground(warp, Modifier.fillMaxWidth().fillMaxHeight(0.56f))
+        HeroBackground(warp, Modifier.fillMaxWidth().fillMaxHeight(0.52f))
 
         Column(
             Modifier
@@ -100,17 +104,17 @@ fun HeroHomeScreen(modifier: Modifier = Modifier) {
             Headline(theme)
             Spacer(Modifier.height(28.dp))
             PrimaryButton(theme)
-            Text(
-                theme.secondary,
-                color = Color.White.copy(alpha = 0.72f),
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier
-                    .padding(top = 14.dp)
+            Row(
+                Modifier
+                    .padding(top = 12.dp)
                     .clip(CircleShape)
                     .clickable(role = Role.Button) {}
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-            )
+                    .padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(theme.secondary, color = Color.White.copy(alpha = 0.78f), fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                Icon(Icons.AutoMirrored.Filled.ArrowRight, contentDescription = null, tint = Color.White.copy(alpha = 0.78f), modifier = Modifier.size(20.dp))
+            }
             Spacer(Modifier.weight(0.4f))
             StatRow(theme)
             Spacer(Modifier.height(24.dp))
@@ -127,9 +131,10 @@ private fun HeroBackground(warp: ShaderState, modifier: Modifier) {
         // Static overlay: drawn from a remembered brush, never recomposed per frame.
         val fade = remember {
             Brush.verticalGradient(
-                0.00f to Color.Black.copy(alpha = 0.10f),
-                0.45f to Color.Transparent,
-                0.72f to PageBlack.copy(alpha = 0.55f),
+                0.00f to Color.Black.copy(alpha = 0.08f),
+                0.30f to Color.Transparent,
+                0.62f to PageBlack.copy(alpha = 0.60f),
+                0.88f to PageBlack.copy(alpha = 0.95f),
                 1.00f to PageBlack,
             )
         }
@@ -154,9 +159,7 @@ private fun TopBar(onCycleTheme: () -> Unit, themeName: String) {
         Spacer(Modifier.weight(1f))
         GlassIconButton(Icons.Filled.Palette, "Color theme: $themeName", onCycleTheme, Modifier.testTag("hero-theme"))
         Spacer(Modifier.width(10.dp))
-        GlassIconButton(Icons.Outlined.Notifications, "Notifications", {})
-        Spacer(Modifier.width(10.dp))
-        GlassIconButton(Icons.Outlined.Person, "Profile", {})
+        GlassIconButton(Icons.Outlined.LocalFireDepartment, "Streak", {})
     }
 }
 
@@ -190,57 +193,79 @@ private fun TodayLabel() {
 /** A short arc of tick marks, curving away from the label like a dial. */
 @Composable
 private fun TickArc(leftSide: Boolean) {
-    Canvas(Modifier.size(width = 64.dp, height = 40.dp)) {
-        val ticks = 9
+    Canvas(Modifier.size(width = 88.dp, height = 44.dp)) {
+        val ticks = 26
         val radius = size.width * 2.2f
         // Arc centre sits far below the label so the ticks bow upward.
         val center = Offset(if (leftSide) size.width * 1.15f else -size.width * 0.15f, size.height / 2 + radius)
-        val sweep = 0.38f
+        val sweep = 0.42f
         val mid = if (leftSide) -PI.toFloat() / 2 - sweep / 2 - 0.05f else -PI.toFloat() / 2 + sweep / 2 + 0.05f
         for (i in 0 until ticks) {
             val f = i / (ticks - 1f)
             val a = mid - sweep / 2 + sweep * f
             // Fade toward the outer end.
             val outer = if (leftSide) 1f - f else f
-            val alpha = 0.85f - 0.65f * outer
-            val len = if (i % 4 == 0) 10.dp.toPx() else 6.dp.toPx()
+            val alpha = 0.75f - 0.68f * outer
+            val len = 12.dp.toPx() - 4.dp.toPx() * outer
             val dir = Offset(cos(a), sin(a))
             val p0 = center + dir * radius
             val p1 = center + dir * (radius - len)
-            drawLine(Color.White.copy(alpha = alpha), p0, p1, strokeWidth = 1.5.dp.toPx(), cap = StrokeCap.Round)
+            drawLine(Color.White.copy(alpha = alpha), p0, p1, strokeWidth = 1.2.dp.toPx(), cap = StrokeCap.Round)
         }
     }
 }
 
 @Composable
 private fun Headline(theme: HeroTheme) {
+    // Chrome-like fill: bright top, a darker band, then a lighter lip at the bottom.
     val gloss = remember {
-        Brush.verticalGradient(listOf(Color.White, Color(0xFFE9E9EE), Color(0xFF9A9AA3)))
+        Brush.verticalGradient(
+            0.00f to Color.White,
+            0.45f to Color(0xFFD9D9DF),
+            0.62f to Color(0xFF8C8C96),
+            1.00f to Color(0xFFC9C9D1),
+        )
     }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(
-                theme.bigValue,
-                style = TextStyle(brush = gloss, fontSize = 112.sp, fontWeight = FontWeight.Black, fontStyle = FontStyle.Italic, letterSpacing = (-4).sp, lineHeight = 112.sp),
-            )
-            if (theme.bigUnit.isNotEmpty()) {
-                Text(
-                    theme.bigUnit,
-                    color = Color.White,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 8.dp, bottom = 22.dp),
-                )
+        theme.badge?.let { badge ->
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 10.dp)) {
+                Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = theme.accent, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(badge.uppercase(), color = theme.accent, fontSize = 14.sp, fontWeight = FontWeight.Black, fontStyle = FontStyle.Italic, letterSpacing = 0.5.sp)
             }
         }
-        Text(
-            theme.title,
-            color = Color.White,
-            fontSize = 30.sp,
-            fontWeight = FontWeight.ExtraBold,
-            fontStyle = FontStyle.Italic,
-            letterSpacing = (-0.5).sp,
-        )
+        if (theme.numeral != null) {
+            Text(
+                theme.numeral,
+                style = TextStyle(
+                    brush = gloss,
+                    fontSize = 136.sp,
+                    lineHeight = 128.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = (-4).sp,
+                    shadow = Shadow(Color.Black.copy(alpha = 0.35f), offset = Offset(0f, 10f), blurRadius = 30f),
+                ),
+            )
+            Text(theme.numeralCaption, color = Color.White.copy(alpha = 0.8f), fontSize = 16.sp, modifier = Modifier.padding(bottom = 4.dp))
+            Text(theme.title, color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Black, letterSpacing = (-1).sp)
+        } else {
+            Text(
+                theme.title,
+                textAlign = TextAlign.Center,
+                style = TextStyle(
+                    brush = gloss,
+                    fontSize = 92.sp,
+                    lineHeight = 84.sp,
+                    fontWeight = FontWeight.Black,
+                    fontStyle = FontStyle.Italic,
+                    letterSpacing = (-3).sp,
+                    shadow = Shadow(Color.Black.copy(alpha = 0.35f), offset = Offset(0f, 10f), blurRadius = 30f),
+                ),
+            )
+        }
+        theme.subtitle?.let {
+            Text(it, color = Color.White.copy(alpha = 0.6f), fontSize = 17.sp, fontStyle = FontStyle.Italic, modifier = Modifier.padding(top = 6.dp))
+        }
     }
 }
 
@@ -251,12 +276,12 @@ private fun PrimaryButton(theme: HeroTheme) {
             .fillMaxWidth()
             .height(60.dp)
             .clip(CircleShape)
-            .background(theme.accent)
+            .background(theme.ctaColor)
             .clickable(role = Role.Button) {}
             .testTag("hero-cta"),
         contentAlignment = Alignment.Center,
     ) {
-        Text(theme.cta, color = theme.onAccent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text(theme.cta, color = Color(0xFF16161A), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -265,7 +290,7 @@ private fun StatRow(theme: HeroTheme) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(theme.statValue, color = Color.White, fontSize = 44.sp, fontWeight = FontWeight.Black, letterSpacing = (-1).sp)
+                Text(theme.statValue, color = theme.statColor, fontSize = 46.sp, fontWeight = FontWeight.Black, letterSpacing = (-1).sp)
                 Text(
                     theme.statUnit,
                     color = Color.White.copy(alpha = 0.7f),
@@ -274,7 +299,7 @@ private fun StatRow(theme: HeroTheme) {
                     modifier = Modifier.padding(start = 6.dp, bottom = 9.dp),
                 )
             }
-            Text(theme.statLabel, color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp)
+            Text(theme.statLabel, color = if (theme.statColor == Color.White) Color.White.copy(alpha = 0.6f) else theme.statColor, fontSize = 15.sp, fontWeight = FontWeight.Medium)
         }
         Row(
             Modifier
@@ -286,7 +311,7 @@ private fun StatRow(theme: HeroTheme) {
         ) {
             Icon(Icons.Filled.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Add meal", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text("Log meal", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -296,13 +321,14 @@ private fun BottomNav(theme: HeroTheme, modifier: Modifier = Modifier) {
     var selected by rememberSaveable { mutableIntStateOf(0) }
     val items = listOf(
         Icons.Filled.Home to "Home",
-        Icons.Outlined.BarChart to "Progress",
-        Icons.Outlined.Person to "Profile",
+        Icons.Filled.FitnessCenter to "Workouts",
+        Icons.Filled.Restaurant to "Meals",
     )
     Row(
         modifier
             .clip(CircleShape)
             .background(Color.White.copy(alpha = 0.10f))
+            .border(1.dp, Color.White.copy(alpha = 0.10f), CircleShape)
             .padding(6.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -316,7 +342,7 @@ private fun BottomNav(theme: HeroTheme, modifier: Modifier = Modifier) {
                     .clickable(role = Role.Tab) { selected = i },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(icon, contentDescription = label, tint = if (on) theme.accent else Color.White.copy(alpha = 0.7f))
+                Icon(icon, contentDescription = label, tint = if (on) Color.White else Color.White.copy(alpha = 0.7f))
             }
         }
     }
@@ -328,18 +354,21 @@ data class HeroTheme(
     val name: String,
     val preset: Preset,
     val accent: Color,
-    val onAccent: Color,
-    val bigValue: String,
-    val bigUnit: String,
+    val ctaColor: Color,
+    val badge: String?,
+    val numeral: String?,
+    val numeralCaption: String,
     val title: String,
+    val subtitle: String?,
     val cta: String,
     val secondary: String,
     val statValue: String,
+    val statColor: Color,
     val statUnit: String,
     val statLabel: String,
 )
 
-private val PageBlack = Color(0xFF09090B)
+private val PageBlack = Color(0xFF0B0C10)
 
 /** Keeps small white labels legible over the brightest parts of the gradient. */
 private val LabelShadow = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.35f), blurRadius = 10f))
@@ -348,16 +377,16 @@ private fun warpPreset(name: String, vararg argb: Long, rotation: Float) = Prese
     name,
     mapOf(
         "fit" to "none",
-        "scale" to 1.4f,
+        "scale" to 2.2f,
         "rotation" to rotation,
-        "speed" to 1.2f,
+        "speed" to 1.0f,
         "colors" to colors(*argb),
-        "proportion" to 0.42f,
+        "proportion" to 0.45f,
         "softness" to 1.0f,
-        "distortion" to 0.28f,
-        "swirl" to 0.7f,
-        "swirlIterations" to 8.0f,
-        "shapeScale" to 0.18f,
+        "distortion" to 0.12f,
+        "swirl" to 0.35f,
+        "swirlIterations" to 5.0f,
+        "shapeScale" to 0.12f,
         "shape" to "checks",
     ),
 )
@@ -365,30 +394,36 @@ private fun warpPreset(name: String, vararg argb: Long, rotation: Float) = Prese
 val HeroThemes: List<HeroTheme> = listOf(
     HeroTheme(
         name = "Coral",
-        preset = warpPreset("Hero Coral", 0xff1a0606L, 0xffff3b30L, 0xffff6f4fL, 0xff7a0f1aL, 0xffffa58aL, rotation = 20f),
-        accent = Color(0xFFFF5A43),
-        onAccent = Color.White,
-        bigValue = "5",
-        bigUnit = "moves",
+        preset = warpPreset("Hero Coral", 0xffe8323aL, 0xffff6a55L, 0xffc4223aL, 0xffff8f73L, rotation = 20f),
+        accent = Color(0xFFFF5A4E),
+        ctaColor = Color(0xFFF6EEF2),
+        badge = null,
+        numeral = "5",
+        numeralCaption = "moves",
         title = "Core & Glutes",
+        subtitle = null,
         cta = "Start session",
-        secondary = "Preview moves",
+        secondary = "Pick a different plan",
         statValue = "640",
+        statColor = Color.White,
         statUnit = "KCAL",
         statLabel = "Energy balance",
     ),
     HeroTheme(
         name = "Neon",
-        preset = warpPreset("Hero Neon", 0xff04140aL, 0xff39ff6aL, 0xffb6ff3bL, 0xff0b5a2aL, 0xff7dffb0L, rotation = 200f),
-        accent = Color(0xFF5CFF7A),
-        onAccent = Color(0xFF04140A),
-        bigValue = "0:45",
-        bigUnit = "rest",
-        title = "Breathe, then go",
+        preset = warpPreset("Hero Neon", 0xff3dff5aL, 0xffc6ff2eL, 0xff17c94aL, 0xff8dff6bL, rotation = 200f),
+        accent = Color(0xFFD4FF3A),
+        ctaColor = Color(0xFFF2F2EC),
+        badge = "Session complete",
+        numeral = null,
+        numeralCaption = "",
+        title = "COOL\nDOWN",
+        subtitle = "Stretch, hydrate, refuel",
         cta = "See recap",
-        secondary = "Skip rest",
+        secondary = "Share your session",
         statValue = "312",
+        statColor = Color(0xFFD4FF3A),
         statUnit = "KCAL",
-        statLabel = "Burned so far",
+        statLabel = "Burned today",
     ),
 )
