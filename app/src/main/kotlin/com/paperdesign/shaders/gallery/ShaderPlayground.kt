@@ -27,8 +27,14 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
+import androidx.compose.material.icons.filled.PanTool
+import androidx.compose.material.icons.filled.ScreenRotation
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -44,6 +50,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -61,7 +69,7 @@ import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 /** Full-screen shader with a controls sheet for presets and every parameter. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ShaderPlayground(spec: ShaderSpec, onBack: () -> Unit) {
     val state = remember(spec) { ShaderState(spec) }
@@ -97,8 +105,11 @@ fun ShaderPlayground(spec: ShaderSpec, onBack: () -> Unit) {
             input = input,
         )
 
+        // Overlays fade out while the translucent controls sheet is open, so they don't show through.
+        val overlayAlpha by animateFloatAsState(if (showControls) 0f else 1f, label = "overlay")
         Column(
             Modifier
+                .graphicsLayer { alpha = overlayAlpha }
                 .align(Alignment.BottomStart)
                 .navigationBarsPadding()
                 .padding(12.dp),
@@ -109,30 +120,36 @@ fun ShaderPlayground(spec: ShaderSpec, onBack: () -> Unit) {
                     Text(hint, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
                 }
             }
+            // M3 Expressive toggle buttons: shape morphs from round to square-ish when on.
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(
-                    selected = gestures,
-                    onClick = { gestures = !gestures },
-                    label = { Text("Pan · zoom · rotate") },
-                    colors = overlayChipColors(),
-                    border = null,
+                ToggleButton(
+                    checked = gestures,
+                    onCheckedChange = { gestures = it },
+                    colors = overlayToggleColors(),
                     modifier = Modifier.testTag("toggle-gestures"),
-                )
+                ) {
+                    Icon(Icons.Filled.PanTool, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Pan · zoom · rotate")
+                }
                 if (!spec.usesTilt) {
-                    FilterChip(
-                        selected = tiltParallax,
-                        onClick = { tiltParallax = !tiltParallax },
-                        label = { Text("Tilt parallax") },
-                        colors = overlayChipColors(),
-                    border = null,
+                    ToggleButton(
+                        checked = tiltParallax,
+                        onCheckedChange = { tiltParallax = it },
+                        colors = overlayToggleColors(),
                         modifier = Modifier.testTag("toggle-tilt"),
-                    )
+                    ) {
+                        Icon(Icons.Filled.ScreenRotation, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Tilt parallax")
+                    }
                 }
             }
         }
 
         Row(
             Modifier
+                .graphicsLayer { alpha = overlayAlpha }
                 .fillMaxWidth()
                 .statusBarsPadding()
                 .padding(12.dp),
@@ -170,8 +187,9 @@ fun ShaderPlayground(spec: ShaderSpec, onBack: () -> Unit) {
         ModalBottomSheet(
             onDismissRequest = { showControls = false },
             sheetState = sheet,
-            scrimColor = Color.Black.copy(alpha = 0.2f),
-            containerColor = ControlColors.Sheet,
+            // Translucent like the Pixel Camera settings sheet: the shader stays visible, dimmed.
+            scrimColor = Color.Black.copy(alpha = 0.15f),
+            containerColor = ControlColors.Sheet.copy(alpha = 0.78f),
             contentColor = ControlColors.Label,
             dragHandle = { BottomSheetDefaults.DragHandle(color = ControlColors.Handle) },
         ) {
@@ -194,12 +212,13 @@ private fun overlayButtonColors() = IconButtonDefaults.filledTonalIconButtonColo
     contentColor = ControlColors.Label,
 )
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun overlayChipColors() = FilterChipDefaults.filterChipColors(
+private fun overlayToggleColors() = ToggleButtonDefaults.colors(
     containerColor = OverlayPill,
-    labelColor = ControlColors.Label,
-    selectedContainerColor = ControlColors.Selected,
-    selectedLabelColor = ControlColors.SelectedIcon,
+    contentColor = ControlColors.Label,
+    checkedContainerColor = ControlColors.Selected,
+    checkedContentColor = ControlColors.SelectedIcon,
 )
 
 /** How far (in graphic-box units) a full tilt moves the pattern in parallax mode. */

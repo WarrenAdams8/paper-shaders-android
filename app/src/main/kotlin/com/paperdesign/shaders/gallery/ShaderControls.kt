@@ -1,6 +1,18 @@
 package com.paperdesign.shaders.gallery
 
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -101,10 +113,11 @@ object ControlColors {
 }
 
 /**
- * Every control for one shader, styled like a camera settings sheet: a bold title with a "…"
- * menu, then rows of label + current value on the left and round toggles, slim sliders or
- * swatches on the right.
+ * Every control for one shader, in a camera-settings style built from Material 3 Expressive
+ * parts: a bold title with a "…" menu, label + current value rows, connected button groups
+ * (ToggleButton) for options, expressive sliders for continuous values, and round swatches.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ShaderControls(
     state: ShaderState,
@@ -117,79 +130,90 @@ fun ShaderControls(
     var menuOpen by remember { mutableStateOf(false) }
     val spec = state.spec
 
-    Column(
-        modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
-            .padding(bottom = 24.dp)
-            .testTag("controls"),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    MaterialExpressiveTheme(colorScheme = ControlScheme) {
+        Column(
+            modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 24.dp)
+                .testTag("controls"),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    spec.title,
+                    color = ControlColors.Label,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                )
+                Box {
+                    FilledTonalIconButton(onClick = { menuOpen = true }) {
+                        Icon(Icons.Filled.MoreHoriz, contentDescription = "More")
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Reset to ${state.presetName}") },
+                            leadingIcon = { Icon(Icons.Filled.RestartAlt, null) },
+                            onClick = {
+                                spec.presets.firstOrNull { it.name == state.presetName }?.let(state::applyPreset)
+                                onResetTime()
+                                menuOpen = false
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(if (showSizing) "Hide sizing & motion" else "Sizing & motion") },
+                            leadingIcon = { Icon(Icons.Filled.Tune, null) },
+                            onClick = { showSizing = !showSizing; menuOpen = false },
+                        )
+                    }
+                }
+            }
             Text(
-                spec.title,
-                color = ControlColors.Label,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f),
+                spec.description,
+                color = ControlColors.Muted,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
             )
-            Box {
-                RoundButton(Icons.Filled.MoreHoriz, "More", selected = false, onClick = { menuOpen = true })
-                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    DropdownMenuItem(
-                        text = { Text("Reset to ${state.presetName}") },
-                        leadingIcon = { Icon(Icons.Filled.RestartAlt, null) },
-                        onClick = {
-                            spec.presets.firstOrNull { it.name == state.presetName }?.let(state::applyPreset)
-                            onResetTime()
-                            menuOpen = false
+
+            Setting("Preset", state.presetName) {
+                ConnectedGroup(
+                    items = spec.presets.map { it.name },
+                    selected = state.presetName,
+                    scrollable = true,
+                    onSelect = { name ->
+                        spec.presets.firstOrNull { it.name == name }?.let(state::applyPreset)
+                        onResetTime()
+                    },
+                    content = { name, _ -> Text(name, maxLines = 1) },
+                )
+            }
+            if (spec.usesImage) {
+                InlineSetting("Image", if (state.image == null) "Sample" else "Your photo") {
+                    ConnectedGroup(
+                        items = listOf("sample", "photo"),
+                        selected = if (state.image == null) "sample" else "photo",
+                        onSelect = { if (it == "sample") state.image = null else onPickImage() },
+                        content = { item, _ ->
+                            Icon(if (item == "sample") Icons.Filled.Image else Icons.Filled.AddPhotoAlternate, contentDescription = if (item == "sample") "Sample image" else "Pick a photo")
                         },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(if (showSizing) "Hide sizing & motion" else "Sizing & motion") },
-                        leadingIcon = { Icon(Icons.Filled.Tune, null) },
-                        onClick = { showSizing = !showSizing; menuOpen = false },
                     )
                 }
             }
-        }
-        Text(
-            spec.description,
-            color = ControlColors.Muted,
-            fontSize = 13.sp,
-            lineHeight = 18.sp,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
-        )
-
-        // Presets: one numbered round button each; the name shows as the row's value.
-        ControlRow("Preset", state.presetName) {
-            spec.presets.forEachIndexed { i, preset ->
-                RoundTextButton(
-                    text = "${i + 1}",
-                    description = preset.name,
-                    selected = state.presetName == preset.name,
-                    onClick = { state.applyPreset(preset); onResetTime() },
+            spec.params.forEach { p -> ParamSetting(p, state, onEditColor = { editingColor = it }) }
+            if (showSizing) {
+                Text(
+                    "Sizing & motion",
+                    color = ControlColors.Label,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 20.dp, bottom = 4.dp),
                 )
+                CommonParams.forSpec(spec).forEach { p -> ParamSetting(p, state, onEditColor = {}) }
             }
-        }
-        if (spec.usesImage) {
-            ControlRow("Image", if (state.image == null) "Sample" else "Your photo") {
-                RoundButton(Icons.Filled.Image, "Sample image", selected = state.image == null, onClick = { state.image = null })
-                RoundButton(Icons.Filled.AddPhotoAlternate, "Pick a photo", selected = state.image != null, onClick = onPickImage)
-            }
-        }
-        spec.params.forEach { p -> ParamRow(p, state, onEditColor = { editingColor = it }) }
-        if (showSizing) {
-            Text(
-                "Sizing & motion",
-                color = ControlColors.Label,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 20.dp, bottom = 4.dp),
-            )
-            CommonParams.forSpec(spec).forEach { p -> ParamRow(p, state, onEditColor = {}) }
         }
     }
 
@@ -205,119 +229,182 @@ fun ShaderControls(
     }
 }
 
+/** Dark scheme so Material components pick up the camera-sheet palette. */
+private val ControlScheme = darkColorScheme(
+    primary = ControlColors.Selected,
+    onPrimary = ControlColors.SelectedIcon,
+    secondaryContainer = ControlColors.Chip,
+    onSecondaryContainer = ControlColors.Label,
+    surfaceContainer = ControlColors.Chip,
+    surfaceContainerHighest = ControlColors.Track,
+    surfaceContainerHigh = ControlColors.Chip,
+    onSurface = ControlColors.Label,
+    onSurfaceVariant = ControlColors.Muted,
+)
+
 /** A color being edited and how to write it back. */
 class ColorTarget(val current: ArgbColor, val apply: (ArgbColor) -> Unit)
 
-/** Label with the current value under it (left), controls (right). */
 @Composable
-private fun ControlRow(label: String, value: String, controls: @Composable () -> Unit) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f).padding(end = 12.dp)) {
-            Text(label, color = ControlColors.Label, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(value, color = ControlColors.Value, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        Row(
-            Modifier
-                .widthIn(max = 260.dp)
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) { controls() }
+private fun LabelValue(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(modifier) {
+        Text(label, color = ControlColors.Label, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(value, color = ControlColors.Value, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
-/** Label/value on the left, a slim slider filling the right half. */
-@OptIn(ExperimentalMaterial3Api::class)
+/** Label/value line with the control underneath, full width. */
 @Composable
-private fun SliderRow(p: FloatParam, state: ShaderState) {
+private fun Setting(label: String, value: String, control: @Composable () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
+        LabelValue(label, value)
+        Spacer(Modifier.height(10.dp))
+        control()
+    }
+}
+
+/** Label/value on the left, a compact control on the right. */
+@Composable
+private fun InlineSetting(label: String, value: String, control: @Composable () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        LabelValue(label, value, Modifier.weight(1f).padding(end = 12.dp))
+        control()
+    }
+}
+
+/**
+ * M3 Expressive connected button group: ToggleButtons sharing one rounded outline, the
+ * selected one filled and morphing to a pill. Scrollable for long lists (e.g. preset names).
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun <T> ConnectedGroup(
+    items: List<T>,
+    selected: T,
+    onSelect: (T) -> Unit,
+    scrollable: Boolean = false,
+    fill: Boolean = false,
+    content: @Composable (T, Boolean) -> Unit,
+) {
+    val rowModifier = when {
+        scrollable -> Modifier.horizontalScroll(rememberScrollState())
+        fill -> Modifier.fillMaxWidth()
+        else -> Modifier
+    }
+    Row(rowModifier, horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
+        items.forEachIndexed { i, item ->
+            val checked = item == selected
+            val shapes = when {
+                items.size == 1 -> ToggleButtonDefaults.shapesFor(ToggleButtonDefaults.size)
+                i == 0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                i == items.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+            }
+            ToggleButton(
+                checked = checked,
+                onCheckedChange = { onSelect(item) },
+                shapes = shapes,
+                colors = ToggleButtonDefaults.colors(
+                    containerColor = ControlColors.Chip,
+                    contentColor = ControlColors.Label,
+                    checkedContainerColor = ControlColors.Selected,
+                    checkedContentColor = ControlColors.SelectedIcon,
+                ),
+                contentPadding = if (scrollable) ButtonDefaults.ContentPadding else PaddingValues(horizontal = 4.dp),
+                modifier = (if (fill) Modifier.weight(1f) else Modifier)
+                    .semantics { role = Role.RadioButton }
+                    .testTag("option-$item"),
+            ) { content(item, checked) }
+        }
+    }
+}
+
+/** Expressive slider: tall rounded track with a gap around a thin bar thumb. */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun SliderSetting(p: FloatParam, state: ShaderState) {
     val value = state.float(p.key)
     // Presets sometimes go past the documented range (e.g. Warp "Cauldron Pot" softness 1.5).
     val lo = minOf(p.min, value)
     val hi = maxOf(p.max, value)
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(0.42f).padding(end = 12.dp)) {
-            Text(p.label, color = ControlColors.Label, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(formatValue(value, p.step), color = ControlColors.Value, fontSize = 14.sp)
-        }
-        val steps = if (p.step > 0f) (((hi - lo) / p.step).roundToInt() - 1).coerceIn(0, 200) else 0
+    val steps = if (p.step > 0f) (((hi - lo) / p.step).roundToInt() - 1).coerceIn(0, 200) else 0
+    val colors = SliderDefaults.colors(
+        thumbColor = ControlColors.Selected,
+        activeTrackColor = ControlColors.Selected,
+        inactiveTrackColor = ControlColors.Track,
+        activeTickColor = ControlColors.SelectedIcon,
+        inactiveTickColor = ControlColors.Muted,
+    )
+    val interaction = remember { MutableInteractionSource() }
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        LabelValue(p.label, formatValue(value, p.step))
+        val sliderSteps = if (steps > 24) 0 else steps
+        val sliderState = remember(sliderSteps, lo, hi) { SliderState(value, sliderSteps, lo..hi) }
+        sliderState.value = value
         Slider(
-            value = value,
+            state = sliderState,
             onValueChange = { v ->
                 val snapped = if (p.step > 0f) (Math.round(v / p.step) * p.step) else v
                 state.set(p.key, snapped)
             },
-            valueRange = lo..hi,
-            steps = steps,
-            thumb = {
-                Box(
-                    Modifier
-                        .size(20.dp)
-                        .background(ControlColors.Selected, CircleShape),
+            colors = colors,
+            interactionSource = interaction,
+            thumb = { _ -> SliderDefaults.Thumb(interactionSource = interaction, colors = colors, thumbSize = DpSize(4.dp, 36.dp)) },
+            track = { sliderState ->
+                SliderDefaults.Track(
+                    sliderState = sliderState,
+                    colors = colors,
+                    modifier = Modifier.height(16.dp),
+                    thumbTrackGapSize = 5.dp,
+                    trackInsideCornerSize = 2.dp,
                 )
             },
-            track = { sliderState -> SlimTrack(sliderState) },
-            modifier = Modifier
-                .weight(0.58f)
-                .height(40.dp)
-                .testTag("slider-${p.key}"),
+            modifier = Modifier.fillMaxWidth().testTag("slider-${p.key}"),
         )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun SlimTrack(sliderState: SliderState) {
-    val range = sliderState.valueRange
-    val fraction = ((sliderState.value - range.start) / (range.endInclusive - range.start)).coerceIn(0f, 1f)
-    Canvas(
-        Modifier
-            .fillMaxWidth()
-            .height(4.dp),
-    ) {
-        val y = size.height / 2
-        val stroke = size.height
-        drawLine(ControlColors.Track, Offset(0f, y), Offset(size.width, y), strokeWidth = stroke, cap = StrokeCap.Round)
-        drawLine(ControlColors.Selected, Offset(0f, y), Offset(size.width * fraction, y), strokeWidth = stroke, cap = StrokeCap.Round)
-    }
-}
-
-@Composable
-private fun ParamRow(p: ParamDef, state: ShaderState, onEditColor: (ColorTarget) -> Unit) {
+private fun ParamSetting(p: ParamDef, state: ShaderState, onEditColor: (ColorTarget) -> Unit) {
     when (p) {
-        is FloatParam -> SliderRow(p, state)
+        is FloatParam -> SliderSetting(p, state)
         is BoolParam -> {
             val on = state.bool(p.key)
-            ControlRow(p.label, if (on) "On" else "Off") {
-                RoundButton(Icons.Filled.Close, "${p.label} off", selected = !on, onClick = { state.set(p.key, false) })
-                RoundButton(Icons.Filled.Check, "${p.label} on", selected = on, onClick = { state.set(p.key, true) })
+            InlineSetting(p.label, if (on) "On" else "Off") {
+                ConnectedGroup(
+                    items = listOf(false, true),
+                    selected = on,
+                    onSelect = { state.set(p.key, it) },
+                    content = { item, _ ->
+                        Icon(if (item) Icons.Filled.Check else Icons.Filled.Close, contentDescription = "${p.label} ${if (item) "on" else "off"}")
+                    },
+                )
             }
         }
         is EnumParam -> {
             val current = state.option(p.key) ?: p.options.first()
-            ControlRow(p.label, prettyOption(current)) {
-                p.options.forEach { option ->
-                    val icon = optionIcon(option)
-                    if (icon != null) {
-                        RoundButton(icon, prettyOption(option), selected = option == current, onClick = { state.set(p.key, option) })
-                    } else {
-                        RoundTextButton(abbreviate(option), prettyOption(option), selected = option == current, onClick = { state.set(p.key, option) })
-                    }
-                }
+            val allIcons = p.options.all { optionIcon(it) != null }
+            Setting(p.label, prettyOption(current)) {
+                ConnectedGroup(
+                    items = p.options,
+                    selected = current,
+                    onSelect = { state.set(p.key, it) },
+                    fill = true,
+                    content = { option, _ ->
+                        val icon = optionIcon(option)
+                        if (icon != null && (allIcons || p.options.size > 4)) {
+                            Icon(icon, contentDescription = prettyOption(option))
+                        } else {
+                            Text(if (p.options.size > 4) abbreviate(option) else prettyOption(option), maxLines = 1, fontSize = 13.sp)
+                        }
+                    },
+                )
             }
         }
         is ColorParam -> {
             val c = state.color(p.key) ?: ArgbColor(0xFF000000)
-            ControlRow(p.label, hex(c)) {
+            InlineSetting(p.label, hex(c)) {
                 Swatch(c, p.label) { onEditColor(ColorTarget(c) { state.set(p.key, it) }) }
             }
         }
@@ -325,16 +412,12 @@ private fun ParamRow(p: ParamDef, state: ShaderState, onEditColor: (ColorTarget)
             val list = state.colors(p.key)
             Column(Modifier.padding(vertical = 10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(p.label, color = ControlColors.Label, fontSize = 16.sp)
-                        Text("${list.size} of ${p.maxCount}", color = ControlColors.Value, fontSize = 14.sp)
+                    LabelValue(p.label, "${list.size} of ${p.maxCount}", Modifier.weight(1f))
+                    FilledTonalIconButton(enabled = list.size > 1, onClick = { state.set(p.key, list.dropLast(1)) }) {
+                        Icon(Icons.Filled.Remove, contentDescription = "Remove color")
                     }
-                    RoundButton(Icons.Filled.Remove, "Remove color", selected = false, enabled = list.size > 1) {
-                        state.set(p.key, list.dropLast(1))
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    RoundButton(Icons.Filled.Add, "Add color", selected = false, enabled = list.size < p.maxCount) {
-                        state.set(p.key, list + (list.lastOrNull() ?: ArgbColor(0xFFFFFFFF)))
+                    FilledTonalIconButton(enabled = list.size < p.maxCount, onClick = { state.set(p.key, list + (list.lastOrNull() ?: ArgbColor(0xFFFFFFFF))) }) {
+                        Icon(Icons.Filled.Add, contentDescription = "Add color")
                     }
                 }
                 Row(
@@ -351,55 +434,6 @@ private fun ParamRow(p: ParamDef, state: ShaderState, onEditColor: (ColorTarget)
                 }
             }
         }
-    }
-}
-
-/** 44dp round icon toggle: pale blue when selected, dark grey otherwise. */
-@Composable
-private fun RoundButton(
-    icon: ImageVector,
-    description: String,
-    selected: Boolean,
-    enabled: Boolean = true,
-    onClick: () -> Unit,
-) {
-    Box(
-        Modifier
-            .size(44.dp)
-            .clip(CircleShape)
-            .background(if (selected) ControlColors.Selected else ControlColors.Chip)
-            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = description },
-        contentAlignment = Alignment.Center,
-    ) {
-        val tint = when {
-            !enabled -> ControlColors.Muted.copy(alpha = 0.4f)
-            selected -> ControlColors.SelectedIcon
-            else -> ControlColors.ChipIcon
-        }
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
-    }
-}
-
-/** Round toggle showing a short text (for options without a fitting icon, and preset numbers). */
-@Composable
-private fun RoundTextButton(text: String, description: String, selected: Boolean, onClick: () -> Unit) {
-    Box(
-        Modifier
-            .size(44.dp)
-            .clip(CircleShape)
-            .background(if (selected) ControlColors.Selected else ControlColors.Chip)
-            .clickable(role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = description },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text,
-            color = if (selected) ControlColors.SelectedIcon else ControlColors.ChipIcon,
-            fontSize = if (text.length > 2) 12.sp else 15.sp,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-        )
     }
 }
 
