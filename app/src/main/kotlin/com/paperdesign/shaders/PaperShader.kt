@@ -1,0 +1,140 @@
+package com.paperdesign.shaders
+
+import android.os.Build
+import android.util.Log
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+
+/** Animation clock in Paper's units: `timeMs` advances by `dt_ms * speed`. */
+@Stable
+class ShaderClock(initialMs: Float = 0f) {
+    var timeMs by mutableFloatStateOf(initialMs)
+    var fps by mutableFloatStateOf(0f)
+        internal set
+}
+
+/**
+ * Renders [state] with its Paper shader.
+ *
+ * - API 33+: AGSL [android.graphics.RuntimeShader]. Uniforms are pushed only after an edit or
+ *   resize; per frame only `u_time` changes. State is read inside the draw lambda, so edits
+ *   and time ticks redraw without recomposing.
+ * - API 24-32: a static gradient made from the shader's colors (or the source image).
+ *
+ * @param playing set false to freeze time (for thumbnails or a pause button).
+ */
+@Composable
+fun PaperShader(
+    state: ShaderState,
+    modifier: Modifier = Modifier,
+    playing: Boolean = true,
+    clock: ShaderClock = remember(state) { ShaderClock(state.float("frame")) },
+) {
+    val speed = state.float("speed")
+    val animate = playing && state.spec.animated && speed != 0f
+    LaunchedEffect(clock, animate) {
+        if (!animate) return@LaunchedEffect
+        var last = 0L
+        var frames = 0
+        var fpsWindowStart = 0L
+        while (true) {
+            withFrameNanos { now ->
+                if (last != 0L) {
+                    val dtMs = (now - last) / 1_000_000f
+                    clock.timeMs += dtMs * state.float("speed")
+                }
+                last = now
+                if (fpsWindowStart == 0L) fpsWindowStart = now
+                frames++
+                val window = now - fpsWindowStart
+                if (window >= 500_000_000L) {
+                    clock.fps = frames * 1e9f / window
+                    frames = 0
+                    fpsWindowStart = now
+                }
+            }
+        }
+    }
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val program = remember(state.spec) {
+            runCatching { ShaderProgram(state.spec, ShaderAssets.body(state.spec)) }
+                .onFailure { Log.e("PaperShader", "AGSL compile failed for ${state.spec.id}", it) }
+                .getOrNull()
+        }
+        if (program == null) {
+            Box(modifier.fallback(state))
+            return
+        }
+        val brush = remember(program) { ShaderBrush(program.shader) }
+        Box(
+            modifier.drawBehind {
+                program.update(
+                    state = state,
+                    width = size.width,
+                    height = size.height,
+                    density = density,
+                    timeMs = clock.timeMs,
+                    image = state.image ?: ShaderAssets.sampleImage,
+                )
+                drawRect(brush)
+            },
+        )
+    } else {
+        Box(modifier.fallback(state))
+    }
+}
+
+/** Pre-AGSL fallback: a radial gradient of the shader's colors, or the source image. */
+private fun Modifier.fallback(state: ShaderState): Modifier = drawWithCache {
+    @Suppress("UNUSED_VARIABLE") val v = state.version
+    val spec = state.spec
+    if (spec.usesImage) {
+        val img = (state.image ?: ShaderAssets.sampleImage).asImageBitmap()
+        onDrawBehind {
+            val s = maxOf(size.width / img.width, size.height / img.height)
+            val dw = (img.width * s).toInt()
+            val dh = (img.height * s).toInt()
+            drawImage(
+                img,
+                dstOffset = IntOffset(((size.width - dw) / 2).toInt(), ((size.height - dh) / 2).toInt()),
+                dstSize = IntSize(dw, dh),
+            )
+        }
+    } else {
+        val colors = buildList {
+            spec.params.forEach { p ->
+                when (p) {
+                    is ColorsParam -> state.colors(p.key).forEach { add(it.toColor()) }
+                    is ColorParam -> state.color(p.key)?.let { add(it.toColor()) }
+                    else -> Unit
+                }
+            }
+        }.ifEmpty { listOf(Color.Black, Color.DarkGray) }
+        val brush = if (colors.size == 1) {
+            Brush.linearGradient(listOf(colors[0], colors[0]))
+        } else {
+            Brush.radialGradient(colors, center = Offset(size.width * 0.5f, size.height * 0.45f), radius = maxOf(size.width, size.height) * 0.8f)
+        }
+        onDrawBehind { drawRect(brush) }
+    }
+}
+
+fun ArgbColor.toColor(): Color = Color(argb.toInt())
