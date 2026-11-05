@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
@@ -165,8 +166,10 @@ fun ShaderPlayground(spec: ShaderSpec, onBack: () -> Unit) {
         ModalBottomSheet(
             onDismissRequest = { showControls = false },
             sheetState = sheet,
-            scrimColor = Color.Transparent,
-            containerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.94f),
+            scrimColor = Color.Black.copy(alpha = 0.2f),
+            containerColor = ControlColors.Sheet,
+            contentColor = ControlColors.Label,
+            dragHandle = { BottomSheetDefaults.DragHandle(color = ControlColors.Handle) },
         ) {
             ShaderControls(
                 state = state,
