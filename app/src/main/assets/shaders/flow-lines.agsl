@@ -1,0 +1,76 @@
+// Flow Lines: an original interactive shader (not from paper-design/shaders).
+// Streamlines of an ideal fluid flowing "downhill" (along the tilt of the phone) around your
+// finger, which acts like a stone in a stream. The stream function is
+//   psi = U * (y - R^2 * y / r^2)   (uniform flow past a cylinder, in the flow's frame)
+// plus a little swirl, and the bands are drawn with fract(psi * density - time).
+uniform float u_time;
+uniform vec4 u_colors[6];
+uniform float u_colorsCount;
+uniform vec4 u_colorBack;
+uniform float u_density;
+uniform float u_speed;
+uniform float u_obstacle;
+uniform float u_swirl;
+uniform float u_softness;
+uniform float u_lineWidth;
+
+vec2 rotate(vec2 v, float a) {
+  float c = cos(a);
+  float s = sin(a);
+  return vec2(c * v.x - s * v.y, s * v.x + c * v.y);
+}
+
+// Stream function at uv; `flowAngle` is the direction the stream runs.
+float streamFunction(vec2 uv, vec2 center, float radius, float flowAngle, float t) {
+  vec2 p = rotate(uv - center, -flowAngle);
+  float r2 = max(dot(p, p), 1e-4);
+  float psi = p.y - radius * radius * p.y / r2;
+  // Swirl: a soft vortex at the obstacle plus a slow meander downstream.
+  psi += u_swirl * .08 * log(r2 + .02);
+  psi += .03 * sin(p.x * 3. - t * .7) * (1. + .5 * sin(p.y * 2.));
+  return psi;
+}
+
+half4 main(float2 fragCoord) {
+  vec2 uv = paper_objectUV(fragCoord);
+  float t = u_time;
+
+  // Flow runs along gravity in screen space; with no tilt data it runs left to right.
+  vec2 down = vec2(u_tilt.x, -u_tilt.y);
+  float flowAngle = length(down) > .15 ? atan(down.y, down.x) : 0.;
+  vec2 center = u_pointer.z > .5 || u_pointer.x + u_pointer.y > 0. ? paper_objectUV(u_pointer.xy) : vec2(0.);
+  float radius = mix(.05, .22, u_obstacle) * (u_pointer.z > .5 ? 1. : .6);
+
+  float density = mix(8., 40., u_density);
+  float psi = streamFunction(uv, center, radius, flowAngle, t);
+  // Bands slide along the streamlines over time (the phase drifts with the flow).
+  float phase = psi * density - t * u_speed * 2.;
+  float band = fract(phase);
+
+  // Screen-space derivative of the phase from two neighbour pixels (no fwidth in AGSL).
+  float px = streamFunction(paper_objectUV(fragCoord + vec2(1., 0.)), center, radius, flowAngle, t) * density - t * u_speed * 2.;
+  float py = streamFunction(paper_objectUV(fragCoord + vec2(0., 1.)), center, radius, flowAngle, t) * density - t * u_speed * 2.;
+  float fw = abs(px - phase) + abs(py - phase);
+
+  // Lines: a soft stripe centred in each band.
+  float w = .5 * u_lineWidth;
+  float edge = abs(band - .5);
+  float line = 1. - smoothstep(w - fw - u_softness * .3, w + fw + u_softness * .3, edge);
+
+  // Colour cycles through the palette band by band.
+  float idx = mod(floor(phase), u_colorsCount);
+  vec4 c = u_colors[0];
+  for (int i = 1; i < 6; i++) {
+    if (float(i) == idx) c = u_colors[i];
+  }
+  // Inside the obstacle: nothing flows.
+  float inside = smoothstep(radius * .9, radius * .9 + 2. * u_objectPx, length(uv - center));
+  line *= inside;
+
+  vec3 color = c.rgb * c.a * line;
+  float opacity = c.a * line;
+  vec3 bg = u_colorBack.rgb * u_colorBack.a;
+  color += bg * (1. - opacity);
+  opacity += u_colorBack.a * (1. - opacity);
+  return half4(color, opacity);
+}

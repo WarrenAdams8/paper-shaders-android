@@ -5,6 +5,7 @@ import android.graphics.BitmapShader
 import android.graphics.RuntimeShader
 import android.graphics.Shader
 import android.os.Build
+import android.os.SystemClock
 import androidx.annotation.RequiresApi
 
 /**
@@ -23,6 +24,12 @@ class ShaderProgram(val spec: ShaderSpec, body: String) {
     private fun has(name: String) = name in declared
 
     private val hasTime = has("u_time")
+    private val hasPointer = has("u_pointer")
+    private val hasTilt = has("u_tilt")
+    private val hasTouches = has("u_touches")
+    private var uploadedInputVersion = -1
+    private var parallaxX = 0f
+    private var parallaxY = 0f
     private val sizing = PaperSizing()
     private val color4 = FloatArray(4)
     private val colorArrays: Map<String, FloatArray> = spec.params.filterIsInstance<ColorsParam>()
@@ -45,8 +52,34 @@ class ShaderProgram(val spec: ShaderSpec, body: String) {
      * Brings uniforms up to date. Cheap when nothing but time changed.
      * @param timeMs Paper's `currentFrame` (milliseconds of animation time).
      */
-    fun update(state: ShaderState, width: Float, height: Float, density: Float, timeMs: Float, image: Bitmap?) {
+    fun update(
+        state: ShaderState,
+        width: Float,
+        height: Float,
+        density: Float,
+        timeMs: Float,
+        image: Bitmap?,
+        input: ShaderInput? = null,
+    ) {
         val version = state.version
+        if (input != null) {
+            val px = input.tiltRelative[0] * input.parallax
+            val py = -input.tiltRelative[1] * input.parallax
+            if (px != parallaxX || py != parallaxY) {
+                parallaxX = px
+                parallaxY = py
+                uploadedVersion = -1 // offsets feed the sizing math
+            }
+            if (input.version != uploadedInputVersion) {
+                if (hasPointer) shader.setFloatUniform("u_pointer", input.pointer)
+                if (hasTilt) shader.setFloatUniform("u_tilt", input.tilt)
+                uploadedInputVersion = input.version
+            }
+            if (hasTouches) {
+                input.fillTouches(SystemClock.elapsedRealtimeNanos())
+                shader.setFloatUniform("u_touches", input.touches)
+            }
+        }
         if (spec.usesImage && image !== uploadedImage && image != null) {
             uploadImage(image)
         }
@@ -75,8 +108,8 @@ class ShaderProgram(val spec: ShaderSpec, body: String) {
         val fit = CommonParams.fit.valueOf(state.option("fit") ?: "none")
         val scale = state.float("scale", 1f)
         val rotation = state.float("rotation")
-        val offsetX = state.float("offsetX")
-        val offsetY = state.float("offsetY")
+        val offsetX = state.float("offsetX") + parallaxX
+        val offsetY = state.float("offsetY") + parallaxY
         val originX = state.float("originX", 0.5f)
         val originY = state.float("originY", 0.5f)
         val worldW = state.float("worldWidth")

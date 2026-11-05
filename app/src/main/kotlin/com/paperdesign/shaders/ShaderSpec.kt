@@ -93,6 +93,10 @@ data class ShaderSpec(
     val sampleImage: SampleImage = SampleImage.PHOTO,
     /** CPU preprocessing upstream runs on the image before upload, if any. */
     val preprocess: ImagePreprocess? = null,
+    /** For shaders that read touch/tilt natively: how to play with them (null = not interactive). */
+    val interactionHint: String? = null,
+    /** True when the shader reads `u_tilt`, so the gravity sensor runs whenever it is open. */
+    val usesTilt: Boolean = false,
 ) {
     val defaultPreset: Preset get() = presets.first()
 }

@@ -50,6 +50,7 @@ fun PaperShader(
     modifier: Modifier = Modifier,
     playing: Boolean = true,
     clock: ShaderClock = remember(state) { ShaderClock(state.float("frame")) },
+    input: ShaderInput? = null,
 ) {
     val speed = state.float("speed")
     val animate = playing && state.spec.animated && speed != 0f
@@ -103,7 +104,10 @@ fun PaperShader(
                     density = density,
                     timeMs = clock.timeMs,
                     image = image,
+                    input = input,
                 )
+                // Read so touch/tilt changes redraw (even for static shaders).
+                input?.version
                 drawRect(brush)
             },
         )

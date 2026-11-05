@@ -14,6 +14,18 @@ An AGSL port of all 30 shaders from [paper-design/shaders](https://github.com/pa
 
 Open a shader directly: `adb shell am start -n com.paperdesign.warp/com.example.warpshader.MainActivity --es shader warp`
 
+## Interactivity
+
+- **Original interactive shaders** (top of the gallery): *Ripple Pond* (tap or hold for ripples, tilt
+  moves the light), *Gravity Goo* (blobs pour the way the phone tilts and stretch toward a held
+  finger), *Flow Lines* (a current runs downhill with the tilt and parts around your finger).
+- **Every Paper shader**: the *Pan · zoom · rotate* chip maps drag, pinch and twist onto offset,
+  scale and rotation. *Tilt parallax* shifts the pattern as you tilt, relative to how you held the
+  phone when you switched it on.
+- Shaders read input through `u_pointer` (x, y px, pressed), `u_touches[8]` (x, y px, age s, alive)
+  and `u_tilt` (gravity in screen space). `ShaderInput` holds them in preallocated arrays; input
+  redraws without recomposing. The gravity sensor only runs while a tilt feature is in use.
+
 ## Using a shader in your own Compose UI
 
 ```kotlin

@@ -26,6 +26,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -49,6 +51,8 @@ import com.paperdesign.shaders.PaperShader
 import com.paperdesign.shaders.ShaderClock
 import com.paperdesign.shaders.ShaderSpec
 import com.paperdesign.shaders.ShaderState
+import com.paperdesign.shaders.ShaderInput
+import com.paperdesign.shaders.TiltSensorEffect
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -60,6 +64,11 @@ import kotlin.math.roundToInt
 fun ShaderPlayground(spec: ShaderSpec, onBack: () -> Unit) {
     val state = remember(spec) { ShaderState(spec) }
     val clock = remember(spec) { ShaderClock(state.float("frame")) }
+    val input = remember(spec) { ShaderInput() }
+    var gestures by rememberSaveable(spec.id) { mutableStateOf(false) }
+    var tiltParallax by rememberSaveable(spec.id) { mutableStateOf(false) }
+    TiltSensorEffect(input, enabled = spec.usesTilt || tiltParallax)
+    input.parallax = if (tiltParallax) TILT_PARALLAX else 0f
     var playing by rememberSaveable(spec.id) { mutableStateOf(true) }
     var showControls by rememberSaveable(spec.id) { mutableStateOf(false) }
     val context = LocalContext.current
@@ -74,7 +83,49 @@ fun ShaderPlayground(spec: ShaderSpec, onBack: () -> Unit) {
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
-        PaperShader(state, Modifier.fillMaxSize().testTag("shader"), playing = playing, clock = clock)
+        PaperShader(
+            state,
+            Modifier
+                .fillMaxSize()
+                .shaderPointer(input)
+                .shaderGestures(state, gestures)
+                .testTag("shader"),
+            playing = playing,
+            clock = clock,
+            input = input,
+        )
+
+        Column(
+            Modifier
+                .align(Alignment.BottomStart)
+                .navigationBarsPadding()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            spec.interactionHint?.let { hint ->
+                Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f)) {
+                    Text(hint, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = gestures,
+                    onClick = { gestures = !gestures },
+                    label = { Text("Pan · zoom · rotate") },
+                    colors = FilterChipDefaults.filterChipColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f)),
+                    modifier = Modifier.testTag("toggle-gestures"),
+                )
+                if (!spec.usesTilt) {
+                    FilterChip(
+                        selected = tiltParallax,
+                        onClick = { tiltParallax = !tiltParallax },
+                        label = { Text("Tilt parallax") },
+                        colors = FilterChipDefaults.filterChipColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f)),
+                        modifier = Modifier.testTag("toggle-tilt"),
+                    )
+                }
+            }
+        }
 
         Row(
             Modifier
@@ -126,6 +177,9 @@ fun ShaderPlayground(spec: ShaderSpec, onBack: () -> Unit) {
         }
     }
 }
+
+/** How far (in graphic-box units) a full tilt moves the pattern in parallax mode. */
+private const val TILT_PARALLAX = 0.6f
 
 /** Decodes a picked image, capped at 2048 px on the long side to keep GPU memory sane. */
 private fun decodeScaled(context: android.content.Context, uri: Uri): Bitmap? = runCatching {

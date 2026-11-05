@@ -1,0 +1,104 @@
+// Gravity Goo: an original interactive shader (not from paper-design/shaders).
+// Glossy metaballs that slide toward whichever way the phone is tilted and stretch toward a
+// finger held on the screen. Shaded as a thick liquid with an analytic-gradient normal.
+uniform float u_time;
+uniform vec4 u_colors[6];
+uniform float u_colorsCount;
+uniform vec4 u_colorBack;
+uniform vec4 u_colorHighlight;
+uniform float u_count;
+uniform float u_size;
+uniform float u_gravity;
+uniform float u_attraction;
+uniform float u_wobble;
+uniform float u_gloss;
+
+const float TWO_PI = 6.28318530718;
+
+float hash11(float p) {
+  p = fract(p * 0.3183099) + 0.1;
+  p *= p + 19.19;
+  return fract(p * p);
+}
+
+// Blob centre: a slow Lissajous drift, pulled along gravity and toward the finger.
+vec2 blobPos(float fi, float t, vec2 down, vec2 finger, float pressed) {
+  float h1 = hash11(fi + 1.3);
+  float h2 = hash11(fi * 7.1 + .4);
+  vec2 p = .32 * vec2(sin(t * (.35 + .3 * h1) + fi * 2.1), cos(t * (.3 + .35 * h2) + fi * 1.7));
+  // Heavier blobs sag further; the field is clamped so they pile up near the edge.
+  p += down * u_gravity * (.25 + .2 * h1);
+  p = clamp(p, vec2(-.48), vec2(.48));
+  float pull = u_attraction * pressed * (.35 + .5 * h2);
+  return mix(p, finger, pull);
+}
+
+half4 main(float2 fragCoord) {
+  vec2 uv = paper_objectUV(fragCoord);
+  float t = u_time;
+  // u_tilt is screen-space (y down); object UV has y up.
+  vec2 down = vec2(u_tilt.x, -u_tilt.y);
+  vec2 finger = paper_objectUV(u_pointer.xy);
+  float pressed = u_pointer.z;
+
+  float field = 0.;
+  vec2 grad = vec2(0.);
+  vec3 colorSum = vec3(0.);
+  float alphaSum = 0.;
+  float weightSum = 0.;
+  for (int i = 0; i < 12; i++) {
+    float fi = float(i);
+    if (fi >= u_count) break;
+    vec2 p = blobPos(fi, t, down, finger, pressed);
+    float r = (.05 + .07 * u_size) * (.7 + .6 * hash11(fi * 3.3));
+    r *= 1. + u_wobble * .15 * sin(t * 3. + fi * 4.);
+    vec2 d = uv - p;
+    float d2 = dot(d, d) + 1e-5;
+    float f = r * r / d2;
+    field += f;
+    grad += -2. * f / d2 * d;          // gradient of r^2 / |d|^2
+    vec4 c = u_colors[0];
+    float ci = mod(fi, u_colorsCount);
+    for (int j = 1; j < 6; j++) {
+      if (float(j) == ci) c = u_colors[j];
+    }
+    colorSum += c.rgb * c.a * f;
+    alphaSum += c.a * f;
+    weightSum += f;
+  }
+  // A finger held down also adds a small blob under it, so the goo bridges to it.
+  if (pressed > .5) {
+    vec2 d = uv - finger;
+    float d2 = dot(d, d) + 1e-5;
+    float r = .04 + .04 * u_size;
+    float f = r * r / d2;
+    field += f;
+    grad += -2. * f / d2 * d;
+  }
+
+  vec3 baseColor = colorSum / max(weightSum, 1e-4);
+  float baseAlpha = alphaSum / max(weightSum, 1e-4);
+
+  // Iso-surface at field = 1, anti-aliased with the analytic gradient (no fwidth in AGSL).
+  float aa = length(grad) * u_objectPx * 1.27;
+  float shape = smoothstep(1. - aa, 1. + aa, field);
+
+  // Fake depth: the normal follows the gradient of 1 / field, which is steep at the rim and
+  // flattens toward the blob centres (the raw field gradient blows up there).
+  vec3 n = normalize(vec3(-grad * .02 / max(field * field, .09), 1.));
+  vec3 light = normalize(vec3(-.5, .7, .9));
+  float diffuse = .65 + .35 * dot(n, light);
+  float spec = pow(max(dot(reflect(-light, n), vec3(0., 0., 1.)), 0.), 24.) * u_gloss;
+  float rim = pow(1. - n.z, 2.);
+
+  vec3 color = baseColor * diffuse - .25 * rim * baseColor;
+  color += spec * u_colorHighlight.rgb * u_colorHighlight.a;
+  color *= shape;
+  float opacity = baseAlpha * shape;
+
+  vec3 bg = u_colorBack.rgb * u_colorBack.a;
+  color += bg * (1. - opacity);
+  opacity += u_colorBack.a * (1. - opacity);
+  color += 1. / 256. * (fract(sin(dot(.014 * fragCoord, vec2(12.9898, 78.233))) * 43758.5453123) - .5);
+  return half4(color, opacity);
+}

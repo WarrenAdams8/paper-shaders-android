@@ -4,7 +4,15 @@ import com.paperdesign.shaders.ShaderSpec
 
 /** Every ported shader, in gallery order. */
 object ShaderCatalog {
-    val all: List<ShaderSpec> = listOf(
+    /** Original interactive shaders made for this app. */
+    val originals: List<ShaderSpec> = listOf(
+        RipplePondSpec,
+        GravityGooSpec,
+        FlowLinesSpec,
+    )
+
+    /** Ports of paper-design/shaders. */
+    val paper: List<ShaderSpec> = listOf(
         ColorPanelsSpec,
         DitheringSpec,
         DotGridSpec,
@@ -36,4 +44,6 @@ object ShaderCatalog {
         GemSmokeSpec,
         LiquidMetalSpec,
     )
+
+    val all: List<ShaderSpec> = originals + paper
 }

@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -75,9 +77,23 @@ private fun GalleryScreen(onOpen: (ShaderSpec) -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxSize().testTag("gallery"),
         ) {
-            items(ShaderCatalog.all, key = { it.id }) { spec ->
+            section("Interactive · touch and tilt", "Original shaders made for this app")
+            items(ShaderCatalog.originals, key = { it.id }) { spec ->
                 GalleryTile(spec, onClick = { onOpen(spec) })
             }
+            section("Paper shaders", "Ports of paper-design/shaders. Every one supports pan/zoom gestures and tilt parallax.")
+            items(ShaderCatalog.paper, key = { it.id }) { spec ->
+                GalleryTile(spec, onClick = { onOpen(spec) })
+            }
+        }
+    }
+}
+
+private fun LazyGridScope.section(title: String, subtitle: String) {
+    item(key = "header-$title", span = { GridItemSpan(maxLineSpan) }) {
+        Column(Modifier.padding(start = 4.dp, top = 12.dp, bottom = 2.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

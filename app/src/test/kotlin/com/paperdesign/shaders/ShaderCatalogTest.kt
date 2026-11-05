@@ -13,8 +13,9 @@ class ShaderCatalogTest {
     private val commonKeys = (CommonParams.sizing + CommonParams.speed + CommonParams.frame).map { it.key }.toSet()
 
     @Test
-    fun catalog_containsAllThirtyPaperShaders() {
-        assertEquals(30, ShaderCatalog.all.size)
+    fun catalog_containsAllThirtyPaperShadersPlusOriginals() {
+        assertEquals(30, ShaderCatalog.paper.size)
+        assertEquals(3, ShaderCatalog.originals.size)
         assertEquals(ShaderCatalog.all.size, ShaderCatalog.all.map { it.id }.toSet().size)
     }
 
