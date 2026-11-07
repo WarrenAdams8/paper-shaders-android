@@ -40,7 +40,7 @@ dependencyResolutionManagement {
 ```kotlin
 // app/build.gradle.kts
 dependencies {
-    implementation("com.github.WarrenAdams8:paper-shaders-android:0.1.0")
+    implementation("com.github.WarrenAdams8:paper-shaders-android:0.1.1")
 }
 ```
 

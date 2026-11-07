@@ -1,8 +1,9 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.1.1 (2026-11-07)
 
-First release as a standalone library.
+First release as a standalone library. (The 0.1.0 tag was withdrawn: its Gradle wrapper
+checksum was wrong, so JitPack could not build it.)
 
 - `:paper-shaders` Android library module, published through JitPack. The gallery is now a
   sample app that depends on it.
