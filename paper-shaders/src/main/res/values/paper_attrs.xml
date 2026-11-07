@@ -2,8 +2,8 @@
 <resources>
     <declare-styleable name="PaperShaderView">
         <!-- Catalog id of the shader to render, e.g. "warp" or "mesh-gradient". -->
-        <attr name="shader" format="string" />
+        <attr name="paperShader" format="string" />
         <!-- Whether animated shaders run. Defaults to true. -->
-        <attr name="playing" format="boolean" />
+        <attr name="paperPlaying" format="boolean" />
     </declare-styleable>
 </resources>

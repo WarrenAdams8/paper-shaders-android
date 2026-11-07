@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.Dispatchers
@@ -70,6 +71,7 @@ fun Modifier.paperShader(
     clock: ShaderClock = remember(state) { ShaderClock(state.float("frame")) },
     input: ShaderInput? = null,
 ): Modifier {
+    ShaderAssets.init(LocalContext.current)
     val speed = state.float("speed")
     val animate = playing && state.spec.animated && speed != 0f
     LaunchedEffect(clock, animate) {

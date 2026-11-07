@@ -11,7 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="140dp"
         android:contentDescription="@string/demo_mesh_gradient"
-        app:shader="mesh-gradient" />
+        app:paperShader="mesh-gradient" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -25,7 +25,7 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:contentDescription="@string/demo_dot_orbit"
-            app:shader="dot-orbit" />
+            app:paperShader="dot-orbit" />
 
         <com.paperdesign.shaders.view.PaperShaderView
             android:id="@+id/view_halftone"
@@ -34,6 +34,6 @@
             android:layout_marginStart="12dp"
             android:layout_weight="1"
             android:contentDescription="@string/demo_halftone"
-            app:shader="halftone-dots" />
+            app:paperShader="halftone-dots" />
     </LinearLayout>
 </LinearLayout>

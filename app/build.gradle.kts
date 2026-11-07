@@ -52,6 +52,8 @@ kotlin {
 }
 
 dependencies {
+  implementation(project(":paper-shaders"))
+
   val composeBom = platform(libs.androidx.compose.bom)
   implementation(composeBom)
   androidTestImplementation(composeBom)

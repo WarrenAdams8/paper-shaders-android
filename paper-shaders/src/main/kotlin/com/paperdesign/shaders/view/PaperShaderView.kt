@@ -16,7 +16,7 @@ import android.view.Choreographer
 import android.view.View
 import androidx.core.content.withStyledAttributes
 import androidx.compose.runtime.snapshots.ObserverHandle
-import com.example.warpshader.R
+import com.paperdesign.shaders.R
 import androidx.compose.runtime.snapshots.Snapshot
 import com.paperdesign.shaders.ShaderAssets
 import com.paperdesign.shaders.ShaderProgram
@@ -90,8 +90,8 @@ class PaperShaderView @JvmOverloads constructor(
     init {
         ShaderAssets.init(context)
         context.withStyledAttributes(attrs, R.styleable.PaperShaderView, defStyleAttr) {
-            getString(R.styleable.PaperShaderView_shader)?.let { setShader(it) }
-            isPlaying = getBoolean(R.styleable.PaperShaderView_playing, true)
+            getString(R.styleable.PaperShaderView_paperShader)?.let { setShader(it) }
+            isPlaying = getBoolean(R.styleable.PaperShaderView_paperPlaying, true)
         }
     }
 

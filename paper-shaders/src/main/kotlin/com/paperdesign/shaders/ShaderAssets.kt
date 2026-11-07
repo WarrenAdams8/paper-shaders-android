@@ -14,7 +14,7 @@ import android.graphics.Shader
 import android.graphics.Typeface
 import android.os.Build
 import androidx.annotation.RequiresApi
-import com.example.warpshader.R
+import com.paperdesign.shaders.R
 import java.util.concurrent.ConcurrentHashMap
 
 /** Shared, lazily created resources: AGSL bodies, the Paper noise texture, a sample image. */
