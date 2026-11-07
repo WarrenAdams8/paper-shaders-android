@@ -3,6 +3,7 @@ package com.paperdesign.shaders
 import android.graphics.Bitmap
 import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,12 +36,8 @@ class ShaderClock(initialMs: Float = 0f) {
 }
 
 /**
- * Renders [state] with its Paper shader.
- *
- * - API 33+: AGSL [android.graphics.RuntimeShader]. Uniforms are pushed only after an edit or
- *   resize; per frame only `u_time` changes. State is read inside the draw lambda, so edits
- *   and time ticks redraw without recomposing.
- * - API 24-32: a static gradient made from the shader's colors (or the source image).
+ * Renders [state] with its Paper shader, filling [modifier]'s bounds.
+ * Same as `Box(modifier.paperShader(state, ...))`; see [paperShader].
  *
  * @param playing set false to freeze time (for thumbnails or a pause button).
  */
@@ -52,6 +49,27 @@ fun PaperShader(
     clock: ShaderClock = remember(state) { ShaderClock(state.float("frame")) },
     input: ShaderInput? = null,
 ) {
+    Box(modifier.paperShader(state, playing, clock, input))
+}
+
+/**
+ * Draws [state]'s Paper shader behind this element's content, for any of the catalog shaders.
+ *
+ * - API 33+: AGSL [android.graphics.RuntimeShader]. Uniforms are pushed only after an edit or
+ *   resize; per frame only `u_time` changes. State is read inside the draw lambda, so edits
+ *   and time ticks redraw without recomposing.
+ * - API 24-32: a static gradient made from the shader's colors (or the source image).
+ *
+ * @param playing set false to freeze time (for thumbnails or a pause button).
+ */
+@Suppress("ComposableModifierFactory", "ModifierFactoryExtensionFunction")
+@Composable
+fun Modifier.paperShader(
+    state: ShaderState,
+    playing: Boolean = true,
+    clock: ShaderClock = remember(state) { ShaderClock(state.float("frame")) },
+    input: ShaderInput? = null,
+): Modifier {
     val speed = state.float("speed")
     val animate = playing && state.spec.animated && speed != 0f
     LaunchedEffect(clock, animate) {
@@ -78,43 +96,36 @@ fun PaperShader(
         while (true) withFrameNanos(onFrame)
     }
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        val program = remember(state.spec) {
-            runCatching {
-                val t0 = System.nanoTime()
-                ShaderProgram(state.spec, ShaderAssets.body(state.spec)).also {
-                    Log.d("PaperShader", "compiled ${state.spec.id} in ${(System.nanoTime() - t0) / 1_000_000} ms")
-                }
-            }
-                .onFailure { Log.e("PaperShader", "AGSL compile failed for ${state.spec.id}", it) }
-                .getOrNull()
-        }
-        if (program == null) {
-            Box(modifier.fallback(state))
-            return
-        }
-        val brush = remember(program) { ShaderBrush(program.shader) }
-        val image = rememberShaderImage(state)
-        Box(
-            modifier.drawBehind {
-                program.update(
-                    state = state,
-                    width = size.width,
-                    height = size.height,
-                    density = density,
-                    timeMs = clock.timeMs,
-                    image = image,
-                    input = input,
-                )
-                // Read so touch/tilt changes redraw (even for static shaders).
-                input?.version
-                drawRect(brush)
-            },
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return fallback(state)
+    val program = remember(state.spec) { compileProgram(state.spec) } ?: return fallback(state)
+    val brush = remember(program) { ShaderBrush(program.shader) }
+    val image = rememberShaderImage(state)
+    return drawBehind {
+        program.update(
+            state = state,
+            width = size.width,
+            height = size.height,
+            density = density,
+            timeMs = clock.timeMs,
+            image = image,
+            input = input,
         )
-    } else {
-        Box(modifier.fallback(state))
+        // Read so touch/tilt changes redraw (even for static shaders).
+        input?.version
+        drawRect(brush)
     }
 }
+
+/** Compiles [spec]'s AGSL; logs and returns null on failure so callers can fall back. */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+internal fun compileProgram(spec: ShaderSpec): ShaderProgram? = runCatching {
+    val t0 = System.nanoTime()
+    ShaderProgram(spec, ShaderAssets.body(spec)).also {
+        Log.d("PaperShader", "compiled ${spec.id} in ${(System.nanoTime() - t0) / 1_000_000} ms")
+    }
+}
+    .onFailure { Log.e("PaperShader", "AGSL compile failed for ${spec.id}", it) }
+    .getOrNull()
 
 /**
  * The bitmap bound to `u_image`: the picked image or the spec's sample, run through the spec's
@@ -149,15 +160,7 @@ private fun Modifier.fallback(state: ShaderState): Modifier = drawWithCache {
             )
         }
     } else {
-        val colors = buildList {
-            spec.params.forEach { p ->
-                when (p) {
-                    is ColorsParam -> state.colors(p.key).forEach { add(it.toColor()) }
-                    is ColorParam -> state.color(p.key)?.let { add(it.toColor()) }
-                    else -> Unit
-                }
-            }
-        }.ifEmpty { listOf(Color.Black, Color.DarkGray) }
+        val colors = fallbackColors(state).map { it.toColor() }
         val brush = if (colors.size == 1) {
             Brush.linearGradient(listOf(colors[0], colors[0]))
         } else {
@@ -166,5 +169,19 @@ private fun Modifier.fallback(state: ShaderState): Modifier = drawWithCache {
         onDrawBehind { drawRect(brush) }
     }
 }
+
+/**
+ * Colors for the pre-AGSL gradient: every color and color-list param of the shader, in spec
+ * order, or black to dark gray when the shader has none. Shared by Compose and [PaperShaderView].
+ */
+fun fallbackColors(state: ShaderState): List<ArgbColor> = buildList {
+    state.spec.params.forEach { p ->
+        when (p) {
+            is ColorsParam -> addAll(state.colors(p.key))
+            is ColorParam -> state.color(p.key)?.let { add(it) }
+            else -> Unit
+        }
+    }
+}.ifEmpty { listOf(ArgbColor(0xFF000000), ArgbColor(0xFF444444)) }
 
 fun ArgbColor.toColor(): Color = Color(argb.toInt())

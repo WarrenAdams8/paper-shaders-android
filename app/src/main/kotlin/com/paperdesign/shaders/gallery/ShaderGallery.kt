@@ -55,9 +55,14 @@ fun ShaderGalleryApp(initialShaderId: String? = null) {
         HeroHomeScreen()
         return
     }
+    if (selectedId == API_DEMO_ID) {
+        BackHandler { selectedId = null }
+        ApiDemoScreen()
+        return
+    }
     val selected = ShaderCatalog.all.firstOrNull { it.id == selectedId }
     if (selected == null) {
-        GalleryScreen(onOpen = { selectedId = it.id }, onOpenHero = { selectedId = HERO_HOME_ID })
+        GalleryScreen(onOpen = { selectedId = it.id }, onOpenExample = { selectedId = it })
     } else {
         BackHandler { selectedId = null }
         ShaderPlayground(spec = selected, onBack = { selectedId = null })
@@ -66,7 +71,7 @@ fun ShaderGalleryApp(initialShaderId: String? = null) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun GalleryScreen(onOpen: (ShaderSpec) -> Unit, onOpenHero: () -> Unit) {
+private fun GalleryScreen(onOpen: (ShaderSpec) -> Unit, onOpenExample: (String) -> Unit) {
     val scroll = TopAppBarDefaults.enterAlwaysScrollBehavior()
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
@@ -90,7 +95,8 @@ private fun GalleryScreen(onOpen: (ShaderSpec) -> Unit, onOpenHero: () -> Unit) 
             modifier = Modifier.fillMaxSize().testTag("gallery"),
         ) {
             section("Examples", "App screens built on a shader")
-            item(key = HERO_HOME_ID) { HeroHomeTile(onClick = onOpenHero) }
+            item(key = HERO_HOME_ID) { HeroHomeTile(onClick = { onOpenExample(HERO_HOME_ID) }) }
+            item(key = API_DEMO_ID) { ApiDemoTile(onClick = { onOpenExample(API_DEMO_ID) }) }
             section("Interactive · touch and tilt", "Original shaders made for this app")
             items(ShaderCatalog.originals, key = { it.id }) { spec ->
                 GalleryTile(spec, onClick = { onOpen(spec) })
@@ -169,6 +175,40 @@ private fun HeroHomeTile(onClick: () -> Unit) {
         }
         Text(
             "Hero home",
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
+        )
+    }
+}
+
+/** Thumbnail for the Modifier/View demo: a frozen Swirl frame. */
+@Composable
+private fun ApiDemoTile(onClick: () -> Unit) {
+    val state = remember { ShaderState(ShaderCatalog.all.first { it.id == "swirl" }) }
+    Column(
+        Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+            .testTag("tile-$API_DEMO_ID"),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(20.dp)),
+        ) {
+            val clock = remember { ShaderClock(state.float("frame") + THUMBNAIL_TIME_MS) }
+            PaperShader(state, Modifier.fillMaxSize(), playing = false, clock = clock)
+            Text(
+                "</>",
+                color = Color.White,
+                fontWeight = FontWeight.Black,
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.align(Alignment.Center),
+            )
+        }
+        Text(
+            "Modifier and View",
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
         )
