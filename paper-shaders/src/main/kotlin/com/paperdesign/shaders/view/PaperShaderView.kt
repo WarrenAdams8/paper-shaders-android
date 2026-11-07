@@ -34,7 +34,8 @@ import java.util.concurrent.Executors
  * <com.paperdesign.shaders.view.PaperShaderView
  *     android:layout_width="match_parent"
  *     android:layout_height="240dp"
- *     app:shader="mesh-gradient" />
+ *     app:paperShader="mesh-gradient"
+ *     app:paperPlaying="true" />
  * ```
  *
  * Edit [state] (`view.state.set("speed", 0.5f)`, `view.state.applyPreset(...)`) and the view
@@ -63,7 +64,7 @@ class PaperShaderView @JvmOverloads constructor(
         }
 
     /** Live parameters. Replacing it switches shader; editing it redraws. */
-    var state: ShaderState = ShaderState(ShaderCatalog.all.first { it.id == "mesh-gradient" })
+    var state: ShaderState = ShaderState(ShaderCatalog.require("mesh-gradient"))
         set(value) {
             field = value
             timeMs = value.float("frame")
@@ -80,7 +81,7 @@ class PaperShaderView @JvmOverloads constructor(
 
     /** Switches to the catalog shader with this id (e.g. `"warp"`), at its default preset. */
     fun setShader(id: String) {
-        state = ShaderState(requireNotNull(ShaderCatalog.all.firstOrNull { it.id == id }) { "Unknown shader id: $id" })
+        state = ShaderState(ShaderCatalog.require(id))
     }
 
     // Image shaders: the preprocessed image, produced off the main thread.
@@ -117,7 +118,9 @@ class PaperShaderView @JvmOverloads constructor(
     }
 
     private fun updateAnimation() {
-        val shouldAnimate = isPlaying && isAttachedToWindow && isShown && state.spec.animated
+        // The pre-AGSL fallback is static, so there is nothing to animate below API 33.
+        val shouldAnimate = isPlaying && isAttachedToWindow && isShown && state.spec.animated &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
         if (shouldAnimate && !animating) {
             animating = true
             lastFrameNanos = 0L

@@ -66,12 +66,17 @@ data class ColorsParam(
 @Immutable
 data class Preset(val name: String, val values: Map<String, Any>)
 
-/** A color stored as ARGB. Wrapped so presets can tell colors from numbers. */
+/**
+ * A color stored as ARGB (`0xAARRGGBB`). Wrapped so presets can tell colors from numbers.
+ * Convert from Compose with [androidx.compose.ui.graphics.Color.toArgbColor].
+ */
 @JvmInline
 value class ArgbColor(val argb: Long)
 
+/** Shorthand for `ArgbColor(argb)`, used by the specs: `color(0xFFFF8800)`. */
 fun color(argb: Long) = ArgbColor(argb)
 
+/** Shorthand for a list of [ArgbColor]s: `colors(0xFF000000, 0xFFFFFFFF)`. */
 fun colors(vararg argb: Long): List<ArgbColor> = argb.map { ArgbColor(it) }
 
 /** Everything needed to render, describe and edit one Paper shader. */
@@ -98,7 +103,20 @@ data class ShaderSpec(
     /** True when the shader reads `u_tilt`, so the gravity sensor runs whenever it is open. */
     val usesTilt: Boolean = false,
 ) {
+    /** The first preset, which upstream treats as the default. */
     val defaultPreset: Preset get() = presets.first()
+
+    /** The preset with this name (e.g. `"Default"`), or null. */
+    fun preset(name: String): Preset? = presets.firstOrNull { it.name == name }
+
+    /**
+     * Every parameter this shader accepts: its own [params], then the shared [CommonParams]
+     * (motion params only for animated shaders).
+     */
+    val allParams: List<ParamDef> get() = params + CommonParams.forSpec(this)
+
+    /** The parameter with this key, including the common sizing and motion params, or null. */
+    fun param(key: String): ParamDef? = params.firstOrNull { it.key == key } ?: CommonParams.byKey[key]
 }
 
 enum class SampleImage { PHOTO, SHAPE }
@@ -126,6 +144,9 @@ object CommonParams {
 
     val sizing: List<ParamDef> = listOf(fit, scale, rotation, offsetX, offsetY, originX, originY, worldWidth, worldHeight)
 
+    internal val byKey: Map<String, ParamDef> = (sizing + speed + frame).associateBy { it.key }
+
+    /** The common params that apply to [spec]: motion (speed, frame) when animated, then sizing. */
     fun forSpec(spec: ShaderSpec): List<ParamDef> {
         val motion = if (spec.animated) listOf(speed, frame) else emptyList()
         return motion + sizing

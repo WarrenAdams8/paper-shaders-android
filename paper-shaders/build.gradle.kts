@@ -55,6 +55,8 @@ dependencies {
   androidTestImplementation(libs.androidx.test.ext.junit)
   androidTestImplementation(libs.androidx.test.runner)
   androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+  // Compose ui-test pulls espresso 3.5, which cannot inject input on API 36+.
+  androidTestImplementation(libs.androidx.test.espresso.core)
   debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
 

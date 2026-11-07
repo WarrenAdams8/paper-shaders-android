@@ -45,5 +45,15 @@ object ShaderCatalog {
         LiquidMetalSpec,
     )
 
+    /** [originals] followed by [paper]. Ids are unique across the list. */
     val all: List<ShaderSpec> = originals + paper
+
+    private val byIdMap: Map<String, ShaderSpec> by lazy { all.associateBy { it.id } }
+
+    /** The shader with this id (e.g. `"warp"`, `"mesh-gradient"`), or null if there is none. */
+    fun byId(id: String): ShaderSpec? = byIdMap[id]
+
+    /** Like [byId] but throws [IllegalArgumentException] naming the valid ids. */
+    fun require(id: String): ShaderSpec = byId(id)
+        ?: throw IllegalArgumentException("Unknown shader id \"$id\". Valid ids: ${all.joinToString { it.id }}")
 }

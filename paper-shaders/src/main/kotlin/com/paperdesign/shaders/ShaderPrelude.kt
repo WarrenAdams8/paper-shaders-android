@@ -8,7 +8,7 @@ package com.paperdesign.shaders
  * `paper_noise(uv)` / `paper_image(uv)` in place of `texture()`. This prelude declares only
  * the uniforms and helpers a body actually references, so every declared uniform gets set.
  */
-object ShaderPrelude {
+internal object ShaderPrelude {
 
     private class Provided(val symbol: String, val code: String)
 

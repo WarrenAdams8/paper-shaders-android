@@ -60,7 +60,7 @@ fun ApiDemoScreen() {
             ) {
                 Text("Any composable", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineSmall)
             }
-            Label("PaperShaderView from XML (app:shader=\"…\")")
+            Label("PaperShaderView from XML (app:paperShader=\"…\")")
             AndroidView(
                 factory = { ctx -> FrameLayout(ctx).also { LayoutInflater.from(ctx).inflate(R.layout.paper_shader_views_demo, it, true) } },
                 modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)),

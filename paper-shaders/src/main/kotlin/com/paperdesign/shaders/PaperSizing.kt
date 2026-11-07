@@ -17,7 +17,7 @@ import kotlin.math.sqrt
  *
  * Runs only when the size or a sizing parameter changes. Allocation free.
  */
-class PaperSizing {
+internal class PaperSizing {
     // Output: affine rows (x then y, 3 floats each) per UV kind.
     val objectUV = FloatArray(6)
     val responsiveUV = FloatArray(6)

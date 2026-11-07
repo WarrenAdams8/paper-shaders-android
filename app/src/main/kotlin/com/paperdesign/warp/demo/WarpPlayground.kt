@@ -1,5 +1,6 @@
 package com.paperdesign.warp.demo
 
+import java.util.Locale
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -422,7 +423,7 @@ private fun BlendTab(
             label = "Speed",
             value = params.speed,
             valueRange = 0f..5f,
-            formatValue = { String.format("%.1fx", it) },
+            formatValue = { String.format(Locale.US, "%.1fx", it) },
             onValueChange = { onParamsChange(params.copy(speed = it)) }
         )
 
@@ -447,7 +448,7 @@ private fun LabeledSlider(
     value: Float,
     valueRange: ClosedFloatingPointRange<Float>,
     steps: Int = 0,
-    formatValue: (Float) -> String = { String.format("%.2f", it) },
+    formatValue: (Float) -> String = { String.format(Locale.US, "%.2f", it) },
     onValueChange: (Float) -> Unit
 ) {
     Column {

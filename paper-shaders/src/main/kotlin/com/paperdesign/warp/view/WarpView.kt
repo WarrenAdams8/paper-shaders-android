@@ -10,6 +10,8 @@ import android.os.Build
 import android.util.AttributeSet
 import android.view.Choreographer
 import android.view.View
+import android.annotation.SuppressLint
+import androidx.core.view.isVisible
 import androidx.annotation.RequiresApi
 import com.paperdesign.warp.WarpParams
 import com.paperdesign.warp.WarpPresets
@@ -81,7 +83,7 @@ class WarpView @JvmOverloads constructor(
     }
 
     private fun startAnimation() {
-        if (!isAnimating && isAttachedToWindow && visibility == VISIBLE) {
+        if (!isAnimating && isAttachedToWindow && isVisible) {
             isAnimating = true
             lastFrameNanos = 0L
             Choreographer.getInstance().postFrameCallback(this)
@@ -107,6 +109,10 @@ class WarpView @JvmOverloads constructor(
         Choreographer.getInstance().postFrameCallback(this)
     }
 
+    private var fallbackW = -1f
+    private var fallbackH = -1f
+    private var fallbackParams: WarpParams? = null
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val w = width.toFloat()
@@ -124,25 +130,25 @@ class WarpView @JvmOverloads constructor(
             )
             canvas.drawRect(0f, 0f, w, h, paint)
         } else {
-            // Fallback for API < 33
-            val colorsInt = IntArray(params.colors.size) { i ->
-                val c = params.colors[i]
-                android.graphics.Color.argb(
-                    (c.alpha * 255).toInt(),
-                    (c.red * 255).toInt(),
-                    (c.green * 255).toInt(),
-                    (c.blue * 255).toInt()
-                )
+            // Fallback for API < 33: rebuild the gradient only when size or params change.
+            if (fallbackW != w || fallbackH != h || fallbackParams != params) {
+                val colorsInt = IntArray(params.colors.size) { i ->
+                    val c = params.colors[i]
+                    android.graphics.Color.argb(
+                        (c.alpha * 255).toInt(),
+                        (c.red * 255).toInt(),
+                        (c.green * 255).toInt(),
+                        (c.blue * 255).toInt()
+                    )
+                }
+                val radius = maxOf(w, h) * 0.75f * params.scale
+                @SuppressLint("DrawAllocation") // Cached: only rebuilt on size or param changes.
+                val gradient = RadialGradient(w * 0.5f, h * 0.5f, radius, colorsInt, null, Shader.TileMode.CLAMP)
+                paint.shader = gradient
+                fallbackW = w
+                fallbackH = h
+                fallbackParams = params
             }
-            val radius = maxOf(w, h) * 0.75f * params.scale
-            paint.shader = RadialGradient(
-                w * 0.5f,
-                h * 0.5f,
-                radius,
-                colorsInt,
-                null,
-                Shader.TileMode.CLAMP
-            )
             canvas.drawRect(0f, 0f, w, h, paint)
         }
     }

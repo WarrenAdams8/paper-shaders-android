@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -73,7 +74,9 @@ fun Modifier.paperShader(
 ): Modifier {
     ShaderAssets.init(LocalContext.current)
     val speed = state.float("speed")
-    val animate = playing && state.spec.animated && speed != 0f
+    // The pre-AGSL fallback is static: skip the frame loop below API 33 to save battery.
+    val animate = playing && state.spec.animated && speed != 0f &&
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
     LaunchedEffect(clock, animate) {
         if (!animate) return@LaunchedEffect
         var last = 0L
@@ -186,4 +189,17 @@ fun fallbackColors(state: ShaderState): List<ArgbColor> = buildList {
     }
 }.ifEmpty { listOf(ArgbColor(0xFF000000), ArgbColor(0xFF444444)) }
 
+/** This color as a Compose [Color]. */
 fun ArgbColor.toColor(): Color = Color(argb.toInt())
+
+/** A Compose [Color] as an [ArgbColor], for [ShaderState.set] and presets. */
+fun Color.toArgbColor(): ArgbColor = ArgbColor(toArgb().toLong() and 0xFFFFFFFFL)
+
+/**
+ * A [ShaderState] for [spec] that survives recomposition. A new state is made when [spec] or
+ * [preset] changes. (Values are not saved across configuration changes or process death; keep
+ * your own copy of [ShaderState.snapshot] if you need that.)
+ */
+@Composable
+fun rememberShaderState(spec: ShaderSpec, preset: Preset = spec.defaultPreset): ShaderState =
+    remember(spec, preset) { ShaderState(spec, preset) }
