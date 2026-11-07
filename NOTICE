@@ -1,0 +1,13 @@
+Paper Shaders for Android
+Copyright 2026 the Paper Shaders for Android contributors
+
+This product includes software derived from Paper Shaders
+(https://github.com/paper-design/shaders), licensed under the Apache License, Version 2.0.
+The shader algorithms, parameters and presets in paper-shaders/src/main/assets/shaders/ and
+paper-shaders/src/main/kotlin/com/paperdesign/shaders/specs/ are ports of that work, modified
+to run as AGSL on Android. The noise texture paper_noise.png is from the same project.
+
+Upstream NOTICE:
+
+Powered by Paper Shaders:
+https://shaders.paper.design

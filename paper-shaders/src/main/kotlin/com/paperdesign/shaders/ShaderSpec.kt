@@ -8,12 +8,17 @@ enum class SizingKind { OBJECT, PATTERN, IMAGE }
 /** A single user-editable parameter of a shader, and the AGSL uniform it drives. */
 @Immutable
 sealed interface ParamDef {
+    /** Key used with [ShaderState.set] and in presets, e.g. `"distortion"`. */
     val key: String
+
+    /** Human readable name, for UI. */
     val label: String
+
+    /** The AGSL uniform this param writes (empty for `speed` and `frame`, which drive time). */
     val uniform: String
 }
 
-/** A continuous (or stepped, when [step] > 0) number. */
+/** A continuous number from [min] to [max], or stepped when [step] > 0. */
 @Immutable
 data class FloatParam(
     override val key: String,
@@ -24,7 +29,7 @@ data class FloatParam(
     val step: Float = 0f,
 ) : ParamDef
 
-/** A named option mapped to the float value the shader expects. */
+/** A choice among [options]; option `i` is uploaded as `values[i]`. */
 @Immutable
 class EnumParam(
     override val key: String,
@@ -33,6 +38,7 @@ class EnumParam(
     val options: List<String>,
     val values: FloatArray,
 ) : ParamDef {
+    /** The uniform value for [option], or the first value if it is not an option. */
     fun valueOf(option: String): Float = values[options.indexOf(option).coerceAtLeast(0)]
 }
 
@@ -52,7 +58,7 @@ data class ColorParam(
     override val uniform: String,
 ) : ParamDef
 
-/** An array of up to [maxCount] RGBA colors plus a count uniform. */
+/** A list of 1 to [maxCount] colors, uploaded as a `float4` array plus [countUniform]. */
 @Immutable
 data class ColorsParam(
     override val key: String,
@@ -79,7 +85,19 @@ fun color(argb: Long) = ArgbColor(argb)
 /** Shorthand for a list of [ArgbColor]s: `colors(0xFF000000, 0xFFFFFFFF)`. */
 fun colors(vararg argb: Long): List<ArgbColor> = argb.map { ArgbColor(it) }
 
-/** Everything needed to render, describe and edit one Paper shader. */
+/**
+ * Everything needed to render, describe and edit one shader. All shaders are in
+ * [com.paperdesign.shaders.specs.ShaderCatalog].
+ *
+ * @property id stable kebab-case id, e.g. `"mesh-gradient"`; also the asset file name.
+ * @property title display name.
+ * @property description one-paragraph description from upstream.
+ * @property animated true when the shader uses time; such shaders accept `speed` and `frame`.
+ * @property sizing which of upstream's UV spaces the shader is laid out in.
+ * @property usesImage true when the shader filters [ShaderState.image].
+ * @property params the shader's own parameters (the common ones are in [CommonParams]).
+ * @property presets Paper's presets; the first is the default.
+ */
 @Immutable
 data class ShaderSpec(
     val id: String,
@@ -119,6 +137,7 @@ data class ShaderSpec(
     fun param(key: String): ParamDef? = params.firstOrNull { it.key == key } ?: CommonParams.byKey[key]
 }
 
+/** Bundled sample images: a photo-like landscape, or an opaque star shape for mask shaders. */
 enum class SampleImage { PHOTO, SHAPE }
 
 /** Upstream `toProcessed*` image preprocessing steps, ported in [ImageProcessing]. */
@@ -130,6 +149,7 @@ enum class ImagePreprocess(val run: (android.graphics.Bitmap) -> android.graphic
 
 /** Sizing and motion parameters every shader shares (the upstream "common params"). */
 object CommonParams {
+    /** How the shader's world box fits the view: `"none"`, `"contain"` or `"cover"`. */
     val fit = EnumParam("fit", "Fit", "u_fit", listOf("none", "contain", "cover"), floatArrayOf(0f, 1f, 2f))
     val scale = FloatParam("scale", "Scale", "u_scale", 0.01f, 4f)
     val rotation = FloatParam("rotation", "Rotation", "u_rotation", 0f, 360f)
@@ -139,9 +159,12 @@ object CommonParams {
     val originY = FloatParam("originY", "Origin Y", "u_originY", 0f, 1f)
     val worldWidth = FloatParam("worldWidth", "World width", "u_worldWidth", 0f, 2000f, step = 1f)
     val worldHeight = FloatParam("worldHeight", "World height", "u_worldHeight", 0f, 2000f, step = 1f)
+    /** Animation speed multiplier; 0 stops the frame loop. */
     val speed = FloatParam("speed", "Speed", "", 0f, 10f)
+    /** Starting time in milliseconds. */
     val frame = FloatParam("frame", "Frame (ms)", "", 0f, 100_000f, step = 1f)
 
+    /** The sizing params every shader accepts. */
     val sizing: List<ParamDef> = listOf(fit, scale, rotation, offsetX, offsetY, originX, originY, worldWidth, worldHeight)
 
     internal val byKey: Map<String, ParamDef> = (sizing + speed + frame).associateBy { it.key }

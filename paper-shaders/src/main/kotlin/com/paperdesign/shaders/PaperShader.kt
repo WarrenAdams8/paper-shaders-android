@@ -32,7 +32,10 @@ import kotlinx.coroutines.withContext
 /** Animation clock in Paper's units: `timeMs` advances by `dt_ms * speed`. */
 @Stable
 class ShaderClock(initialMs: Float = 0f) {
+    /** Shader time in milliseconds. Set it to scrub; the frame loop adds `frame ms * speed` each frame. */
     var timeMs by mutableFloatStateOf(initialMs)
+
+    /** Measured frames per second while animating (updated twice a second), for debug overlays. */
     var fps by mutableFloatStateOf(0f)
         internal set
 }

@@ -27,10 +27,14 @@ import androidx.compose.ui.platform.LocalContext
  */
 @Stable
 class ShaderInput {
+    /** Bumped on every change; the renderer reads it during draw to redraw without recomposing. */
     var version by mutableIntStateOf(0)
         private set
 
+    /** `u_pointer`: x and y in pixels of the shader's own bounds, then 1 while pressed, else 0. */
     val pointer = FloatArray(3)
+
+    /** `u_tilt`: smoothed screen-space gravity direction, each component in -1..1. */
     val tilt = FloatArray(2)
 
     /** Tilt relative to how the phone was held when tilt was switched on (for parallax). */
@@ -50,6 +54,7 @@ class ShaderInput {
     /** Uniform-ready `u_touches` (refreshed by [fillTouches]). */
     val touches = FloatArray(MAX_TOUCHES * 4)
 
+    /** A finger went down at ([x], [y]) px: presses the pointer and records a tap for `u_touches`. */
     fun pointerDown(x: Float, y: Float) {
         pointer[0] = x; pointer[1] = y; pointer[2] = 1f
         tapX[tapNext] = x
@@ -59,11 +64,13 @@ class ShaderInput {
         version++
     }
 
+    /** The pointer moved to ([x], [y]) px. */
     fun pointerMove(x: Float, y: Float) {
         pointer[0] = x; pointer[1] = y
         version++
     }
 
+    /** The pointer was released. Recorded taps keep aging in `u_touches`. */
     fun pointerUp() {
         pointer[2] = 0f
         version++
@@ -83,6 +90,7 @@ class ShaderInput {
         version++
     }
 
+    /** Clears tilt and the parallax baseline, e.g. when tilt is switched off. */
     fun resetTilt() {
         tilt[0] = 0f; tilt[1] = 0f
         tiltRelative[0] = 0f; tiltRelative[1] = 0f

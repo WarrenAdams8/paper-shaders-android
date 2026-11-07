@@ -73,6 +73,7 @@ class PaperShaderView @JvmOverloads constructor(
             invalidate()
         }
 
+    /** Whether animated shaders run. Mirrors the `paperPlaying` XML attribute. */
     var isPlaying: Boolean = true
         set(value) {
             field = value

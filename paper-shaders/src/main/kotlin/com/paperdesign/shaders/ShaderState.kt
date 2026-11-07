@@ -26,6 +26,7 @@ class ShaderState(val spec: ShaderSpec, preset: Preset = spec.defaultPreset) {
     /** Source image for image-based shaders. `null` falls back to the bundled sample. */
     var image by mutableStateOf<Bitmap?>(null)
 
+    /** Name of the last applied preset. Edits do not change it. */
     var presetName by mutableStateOf(preset.name)
         private set
 
@@ -126,7 +127,7 @@ class ShaderState(val spec: ShaderSpec, preset: Preset = spec.defaultPreset) {
     fun snapshot(): Map<String, Any> = values.toMap()
 
     companion object {
-        private val DEFAULTS: Map<String, Any> = mapOf(
+        internal val DEFAULTS: Map<String, Any> = mapOf(
             "fit" to "contain",
             "scale" to 1f,
             "rotation" to 0f,

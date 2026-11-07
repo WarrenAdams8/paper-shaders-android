@@ -17,7 +17,10 @@ import androidx.annotation.RequiresApi
  */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 class ShaderProgram(val spec: ShaderSpec, body: String) {
+    /** The full AGSL source: generated prelude plus [body]. Useful when debugging compile errors. */
     val source: String = ShaderPrelude.build(body)
+
+    /** The compiled shader. Draw it with a `Paint` or Compose `ShaderBrush` after [update]. */
     val shader: RuntimeShader = RuntimeShader(source)
 
     private val declared: Set<String> = UNIFORM_REGEX.findAll(source).map { it.groupValues[2] }.toSet()

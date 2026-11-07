@@ -4,8 +4,9 @@ plugins {
   `maven-publish`
 }
 
+// JitPack builds set VERSION to the git tag; local builds use VERSION_NAME from gradle.properties.
 group = providers.gradleProperty("GROUP").get()
-version = providers.gradleProperty("VERSION_NAME").get()
+version = providers.environmentVariable("VERSION").orElse(providers.gradleProperty("VERSION_NAME")).get()
 
 android {
   namespace = "com.paperdesign.shaders"
@@ -44,7 +45,7 @@ dependencies {
   api(composeBom)
   api(libs.androidx.compose.ui)
   api(libs.androidx.compose.runtime)
-  implementation(libs.androidx.compose.foundation)
+  api(libs.androidx.compose.foundation)
   implementation(libs.androidx.core.ktx)
   implementation(libs.kotlinx.coroutines.android)
 

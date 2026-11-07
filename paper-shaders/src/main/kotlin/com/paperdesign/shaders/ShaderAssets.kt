@@ -22,10 +22,16 @@ object ShaderAssets {
     private lateinit var appContext: Context
     private val bodies = ConcurrentHashMap<String, String>()
 
+    /**
+     * Stores the application context used to read shader bodies and the noise texture.
+     * `PaperShader` and `PaperShaderView` call this for you; call it yourself only before using
+     * [body], [noiseBitmap] or [ShaderProgram] directly.
+     */
     fun init(context: Context) {
         if (!::appContext.isInitialized) appContext = context.applicationContext
     }
 
+    /** The AGSL body of [spec] from the library assets, cached after the first read. */
     fun body(spec: ShaderSpec): String = bodies.getOrPut(spec.asset) {
         appContext.assets.open(spec.asset).bufferedReader().use { it.readText() }
     }
@@ -57,6 +63,7 @@ object ShaderAssets {
     /** Upstream's `transparentPixel`, shown while an image is still being processed. */
     val transparentPixel: Bitmap by lazy { createBitmap(1, 1) }
 
+    /** The bundled sample image for [kind]. */
     fun sample(kind: SampleImage): Bitmap = when (kind) {
         SampleImage.PHOTO -> sampleImage
         SampleImage.SHAPE -> sampleShape
@@ -66,6 +73,7 @@ object ShaderAssets {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Pair<Bitmap, ImagePreprocess>, Bitmap>) = size > 6
     }
 
+    /** The cached result of [process] for this source and step, or null if not processed yet. */
     fun cachedProcessed(source: Bitmap, step: ImagePreprocess): Bitmap? = synchronized(processed) { processed[source to step] }
 
     /** Runs [step] on [source] (slow: call off the main thread) and caches the result. */
